@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>闖關挑戰 · 班級經濟</title>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<style>
+:root{
+  --bg:#122A29; --bg2:#0D211F; --panel:#FBF3DE; --panelDark:#EFE4C4;
+  --ink:#1C2622; --soft:#5B6E68; --line:#DDD0AA;
+  --gold:#D6A94A; --gold-dark:#9C7325; --gold-soft:#FBEACB;
+  --teal:#2F7A6E; --teal-soft:#DCEFE9;
+  --red:#C1503F; --red-soft:#F7DCD6;
+  --cjk:"PingFang TC","Microsoft JhengHei","Noto Sans TC","Heiti TC",sans-serif;
+  --mono:"SF Mono","JetBrains Mono","Roboto Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:var(--cjk); color:var(--ink);
+  background:radial-gradient(circle at 20% 0%, #1B3D3A 0%, var(--bg) 45%, var(--bg2) 100%);
+  min-height:100vh; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:760px;margin:0 auto;padding:20px 16px 60px;min-height:100vh;}
+.center-loading{display:flex;align-items:center;justify-content:center;min-height:80vh;color:var(--gold-soft);font-weight:700;font-size:16px;text-align:center;padding:0 20px;}
+.brandhead{display:flex;flex-direction:column;align-items:center;gap:4px;margin:10px 0 22px;color:var(--gold-soft);}
+.brandhead .em{font-size:38px;}
+.brandhead h1{margin:0;font-size:22px;letter-spacing:1px;color:#fff;}
+.brandhead .sub{font-size:13px;color:#9FC7BC;}
+.panel{background:var(--panel);border-radius:18px;padding:20px;box-shadow:0 14px 34px rgba(0,0,0,.28);}
+.err-box{background:var(--red-soft);color:#7A2E22;border-radius:12px;padding:14px 16px;font-size:14px;line-height:1.7;}
+.btn{border:0;border-radius:12px;padding:12px 18px;font-family:var(--cjk);font-size:15px;font-weight:700;cursor:pointer;transition:transform .08s ease;}
+.btn:active{transform:scale(.97);}
+.btn.pri{background:var(--teal);color:#fff;}
+.btn.gold{background:var(--gold);color:#3B2A0C;}
+.btn.gh{background:#fff;color:var(--ink);border:1px solid var(--line);}
+.btn.dg{background:var(--red);color:#fff;}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+.stepTitle{font-size:13px;font-weight:800;color:var(--gold-dark);letter-spacing:1px;margin-bottom:10px;}
+.choiceGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;}
+.choiceBtn{background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:14px 10px;font-family:var(--cjk);font-weight:700;font-size:15px;cursor:pointer;text-align:center;}
+.choiceBtn:active{transform:scale(.96);}
+.choiceBtn .pts{display:block;font-family:var(--mono);font-size:12px;color:var(--soft);font-weight:600;margin-top:4px;}
+.topbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;color:#fff;margin-bottom:16px;}
+.topbar .who{font-weight:800;font-size:16px;}
+.topbar .cls{font-size:12px;color:#9FC7BC;}
+.topbar .spring{flex:1;}
+.ptsPill{background:var(--gold);color:#3B2A0C;font-family:var(--mono);font-weight:800;font-size:15px;padding:7px 14px;border-radius:20px;}
+.iconBtn{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:8px 14px;font-family:var(--cjk);font-size:13px;font-weight:700;cursor:pointer;}
+.trail{display:flex;flex-direction:column;gap:0;}
+.node{display:flex;gap:14px;position:relative;padding:10px 0;}
+.node .line{position:absolute;left:27px;top:56px;bottom:-10px;width:3px;background:var(--line);}
+.node:last-child .line{display:none;}
+.badgeCircle{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;flex-shrink:0;font-family:var(--mono);z-index:1;border:3px solid transparent;}
+.badgeCircle.done{background:var(--gold);color:#3B2A0C;border-color:var(--gold-dark);}
+.badgeCircle.open{background:var(--teal);color:#fff;border-color:#1E5951;}
+.badgeCircle.poor{background:#fff;color:var(--soft);border-color:var(--line);}
+.badgeCircle.locked{background:#E7E0CC;color:#B3A883;border-color:var(--line);}
+.nodeBody{flex:1;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;}
+.nodeBody .top1{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+.nodeBody .nm{font-weight:800;font-size:15px;}
+.nodeBody .cost{font-family:var(--mono);font-size:13px;color:var(--gold-dark);font-weight:800;}
+.nodeBody .desc{font-size:12.5px;color:var(--soft);line-height:1.5;}
+.nodeBody .stateTag{align-self:flex-start;font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:20px;margin-top:2px;}
+.stateTag.done{background:var(--gold-soft);color:var(--gold-dark);}
+.stateTag.open{background:var(--teal-soft);color:var(--teal);}
+.stateTag.poor{background:#EEE;color:var(--soft);}
+.stateTag.locked{background:#EEE;color:#B3A883;}
+.playBtnRow{margin-top:4px;}
+.overlay{position:fixed;inset:0;background:rgba(10,20,18,.55);display:flex;align-items:center;justify-content:center;padding:20px;z-index:60;}
+.modalBox{background:#fff;border-radius:18px;max-width:400px;width:100%;padding:22px;text-align:center;}
+.modalBox h3{margin:0 0 8px;font-size:18px;}
+.modalBox p{font-size:14px;color:var(--soft);line-height:1.7;margin:0 0 18px;}
+.modalBox .btnRow{display:flex;gap:10px;justify-content:center;}
+.playHead{display:flex;align-items:center;gap:10px;color:#fff;margin-bottom:14px;}
+.playHead .lv{font-weight:800;font-size:16px;}
+.playHead .spring{flex:1;}
+.puzzleWrap{background:var(--panel);border-radius:18px;padding:20px;min-height:260px;}
+.giveUpRow{display:flex;justify-content:center;margin-top:18px;}
+.mini-note{font-size:12px;color:var(--soft);text-align:center;margin-top:8px;}
+.resultWrap{text-align:center;padding:40px 20px;}
+.resultWrap .emoji{font-size:56px;margin-bottom:10px;}
+.resultWrap h2{margin:0 0 8px;color:#fff;font-size:24px;}
+.resultWrap p{color:#B9D6CD;font-size:14px;line-height:1.7;margin:0 0 22px;}
+.badgeShow{display:inline-flex;flex-direction:column;align-items:center;gap:6px;background:var(--gold-soft);border:2px solid var(--gold);border-radius:16px;padding:16px 26px;margin-bottom:22px;}
+.badgeShow .em{font-size:34px;}
+.badgeShow .nm{font-weight:800;color:var(--gold-dark);}
+.badgeGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;}
+.badgeCard{background:#fff;border-radius:14px;padding:16px 10px;text-align:center;border:2px solid var(--line);}
+.badgeCard.got{border-color:var(--gold);background:var(--gold-soft);}
+.badgeCard .em{font-size:30px;display:block;margin-bottom:6px;}
+.badgeCard .nm{font-weight:700;font-size:13px;}
+.badgeCard .st{font-size:11px;color:var(--soft);margin-top:4px;}
+
+/* ---- shared puzzle bits ---- */
+.pTitle{font-weight:800;font-size:16px;margin-bottom:4px;}
+.pDesc{font-size:13px;color:var(--soft);margin-bottom:14px;line-height:1.6;}
+.grid2{display:grid;gap:10px;}
+.cardTile{aspect-ratio:1;border-radius:12px;border:2px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;cursor:pointer;}
+.cardTile.done{background:var(--teal-soft);border-color:var(--teal);opacity:.6;cursor:default;}
+.optBtn{display:block;width:100%;text-align:left;background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;font-family:var(--cjk);font-size:14.5px;font-weight:600;cursor:pointer;margin-bottom:9px;}
+.optBtn.correct{background:var(--teal-soft);border-color:var(--teal);}
+.optBtn.wrong{background:var(--red-soft);border-color:var(--red);}
+.numTile{width:56px;height:56px;border-radius:12px;border:2px solid var(--line);background:#fff;font-family:var(--mono);font-size:20px;font-weight:800;cursor:pointer;}
+.numTile.sel{background:var(--teal);color:#fff;border-color:#1E5951;}
+.opBtn{width:48px;height:48px;border-radius:10px;border:2px solid var(--line);background:#fff;font-size:18px;font-weight:800;cursor:pointer;}
+.mazeGrid{display:inline-grid;gap:2px;background:var(--ink);padding:4px;border-radius:10px;margin:0 auto;}
+.mazeCell{width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.arrowPad{display:grid;grid-template-columns:repeat(3,52px);grid-template-rows:repeat(2,52px);gap:6px;justify-content:center;margin-top:16px;}
+.arrowBtn{border:0;border-radius:10px;background:var(--teal);color:#fff;font-size:20px;font-weight:800;cursor:pointer;}
+.sudokuGrid{display:grid;grid-template-columns:repeat(4,54px);grid-template-rows:repeat(4,54px);gap:3px;background:var(--ink);padding:4px;border-radius:10px;margin:0 auto 14px;}
+.sudokuCell{background:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:20px;font-weight:800;cursor:pointer;}
+.sudokuCell.fixed{background:var(--panelDark);color:var(--soft);cursor:default;}
+.sudokuCell.sel{outline:3px solid var(--teal);outline-offset:-3px;}
+.padRow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+.stageDots{display:flex;gap:6px;justify-content:center;margin-bottom:14px;}
+.stageDots span{width:10px;height:10px;border-radius:50%;background:var(--line);}
+.stageDots span.on{background:var(--teal);}
+.stageDots span.done{background:var(--gold);}
+.centerCol{display:flex;flex-direction:column;align-items:center;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState, useEffect, useRef, useMemo} = React;
+const e = React.createElement;
+
+// ============================================================
+// ⚙️ 設定：跟班級經濟計分板使用同一個 Apps Script 部署網址
+// ============================================================
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzhuj80ozTlDJMka5TEvNCjdvj5fMFepQnckJ8c-wveTD1Wg9-yl83BfVw5w-PXxgC9/exec';
+
+async function gs(action, payload) {
+  const body = {action};
+  if (payload !== undefined) body.payload = payload;
+  const resp = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    headers: {'Content-Type': 'text/plain'},
+    body: JSON.stringify(body),
+    redirect: 'follow'
+  });
+  const text = await resp.text();
+  let json;
+  try { json = JSON.parse(text); } catch (err) { throw new Error('伺服器回應格式錯誤'); }
+  if (!json.ok) throw new Error(json.error || 'API 發生錯誤');
+  return json.result;
+}
+
+// ===== utils =====
+function shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function randInt(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
+function pick(arr){return arr[randInt(0,arr.length-1)];}
+
+// ===== level config =====
+const LEVELS = [
+  {id:1, name:'記憶新手村', cost:3,  type:'memory',    badge:'🟢', badgeName:'新手勇者',  desc:'翻牌配對，考驗觀察與記憶力'},
+  {id:2, name:'找碴任務',   cost:5,  type:'spotdiff',  badge:'🔍', badgeName:'火眼金睛',  desc:'比對兩張圖，找出不一樣的地方'},
+  {id:3, name:'推箱迷城',   cost:8,  type:'sokoban',   badge:'📦', badgeName:'搬運高手',  desc:'把箱子推到指定位置'},
+  {id:4, name:'規律密碼',   cost:12, type:'sequence',  badge:'🔢', badgeName:'邏輯之眼',  desc:'找出數列或圖形的規律'},
+  {id:5, name:'24點挑戰',   cost:18, type:'twentyfour',badge:'➗', badgeName:'心算達人',  desc:'用加減乘除湊出 24'},
+  {id:6, name:'成語謎陣',   cost:25, type:'idiom',     badge:'📖', badgeName:'詞彙大師',  desc:'看提示，選出正確的成語'},
+  {id:7, name:'迷宮試煉',   cost:35, type:'maze',      badge:'🧭', badgeName:'探路先鋒',  desc:'在有限步數內走出迷宮'},
+  {id:8, name:'數獨要塞',   cost:48, type:'sudoku',    badge:'🧩', badgeName:'數字工程師', desc:'完成 4x4 小數獨'},
+  {id:9, name:'推理密室',   cost:65, type:'logic',     badge:'🕵️', badgeName:'名偵探',    desc:'根據線索推理出正確答案'},
+  {id:10,name:'王者試煉',   cost:90, type:'boss',      badge:'👑', badgeName:'班級傳說',  desc:'三階段連續挑戰，全部過關才算破關'}
+];
+
+// ============================================================
+// 拼圖元件們
+// ============================================================
+
+function useGuardedResult(onWin, onLose){
+  const done = useRef(false);
+  const win = () => { if(done.current) return; done.current = true; onWin(); };
+  const lose = () => { if(done.current) return; done.current = true; onLose(); };
+  return [win, lose];
+}
+
+function GiveUp({onLose}){
+  return e("div",{className:"giveUpRow"},
+    e("button",{className:"btn gh",onClick:onLose},"放棄挑戰"));
+}
+
+// ---- 1. 記憶配對 ----
+const EMOJI_POOL = ['🐶','🐱','🐰','🐻','🦊','🐼','🐸','🐷','🦁','🐵','🐔','🦄','🐙','🦋','🐝','🐢'];
+function MemoryGame({onWin,onLose,pairCount=6,maxMoves=16}){
+  const [win,lose] = useGuardedResult(onWin,onLose);
+  const [cards,setCards] = useState(()=>{
+    const chosen = shuffle(EMOJI_POOL).slice(0,pairCount);
+    return shuffle([...chosen,...chosen]).map((emoji,i)=>({id:i,emoji,flipped:false,matched:false}));
+  });
+  const [flippedIdx,setFlippedIdx] = useState([]);
+  const [moves,setMoves] = useState(0);
+  const busyRef = useRef(false);
+
+  function flip(i){
+    if(busyRef.current || cards[i].flipped || cards[i].matched) return;
+    const next = cards.map((c,idx)=> idx===i ? {...c,flipped:true} : c);
+    setCards(next);
+    const nf = [...flippedIdx, i];
+    if(nf.length < 2){ setFlippedIdx(nf); return; }
+    busyRef.current = true;
+    const newMoves = moves+1;
+    setMoves(newMoves);
+    const [a,b] = nf;
+    if(next[a].emoji === next[b].emoji){
+      setTimeout(()=>{
+        setCards(cur=>{
+          const upd = cur.map((c,idx)=> (idx===a||idx===b) ? {...c,matched:true} : c);
+          if(upd.every(c=>c.matched)) setTimeout(win,350);
+          return upd;
+        });
+        setFlippedIdx([]); busyRef.current=false;
+      },500);
+    } else {
+      setTimeout(()=>{
+        setCards(cur=>cur.map((c,idx)=> (idx===a||idx===b) ? {...c,flipped:false} : c));
+        setFlippedIdx([]); busyRef.current=false;
+        if(newMoves >= maxMoves) setTimeout(lose,300);
+      },700);
+    }
+  }
+
+  const cols = pairCount<=4 ? 4 : 4;
+  return e("div",null,
+    e("div",{className:"pTitle"},"翻牌配對"),
+    e("div",{className:"pDesc"},"翻兩張牌，找出所有配對。可翻牌次數：",maxMoves," 次（已用 ",moves," 次）"),
+    e("div",{className:"grid2",style:{gridTemplateColumns:`repeat(${cols},1fr)`,maxWidth:340,margin:"0 auto"}},
+      cards.map((c,i)=> e("div",{
+        key:c.id,
+        className:`cardTile ${c.matched?"done":""}`,
+        onClick:()=>flip(i)
+      }, (c.flipped||c.matched) ? c.emoji : "❔"))),
+    e(GiveUp,{onLose:lose}));
+}
+
+// ---- 2. 找碴 ----
+const FRUIT_ICONS = ['🍎','🍌','🍇','🍉','🍒','🍋','🍓','🥝','🍑','🍍'];
+function SpotDiffGame({onWin,onLose}){
+  const [win,lose] = useGuardedResult(onWin,onLose);
+  const [state] = useState(()=>{
+    const original = Array.from({length:16},()=>pick(FRUIT_ICONS));
+    const diffIdx = shuffle(Array.from({length:16},(_,i)=>i)).slice(0,3);
+    const modified = original.map((ic,i)=> diffIdx.includes(i) ? pick(FRUIT_ICONS.filter(x=>x!==ic)) : ic);
+    return {original, diffIdx, modified};
+  });
+  const [found,setFound] = useState([]);
+  const [wrong,setWrong] = useState(0);
+  const [flashWrong,setFlashWrong] = useState(-1);
+
+  function clickCell(i){
+    if(found.includes(i)) return;
+    if(state.diffIdx.includes(i)){
+      const nf=[...found,i]; setFound(nf);
+      if(nf.length===3) setTimeout(win,300);
+    } else {
+      setFlashWrong(i);
+      setTimeout(()=>setFlashWrong(-1),350);
+      const w=wrong+1; setWrong(w);
+      if(w>=5) setTimeout(lose,300);
+    }
+  }
+  function cellStyle(i,isRight){
+    if(isRight && found.includes(i)) return {background:"var(--teal-soft)",borderColor:"var(--teal)"};
+    if(isRight && flashWrong===i) return {background:"var(--red-soft)",borderColor:"var(--red)"};
+    return {};
+  }
+  return e("div",null,
+    e("div",{className:"pTitle"},"找碴任務"),
+    e("div",{className:"pDesc"},"右邊圖有 3 處和左邊不一樣，點右邊圖找出來。錯 5 次就失敗（已錯 ",wrong,"／5）"),
+    e("div",{style:{display:"flex",gap:14,justifyContent:"center",flexWrap:"wrap"}},
+      e("div",null,
+        e("div",{style:{textAlign:"center",fontSize:12,color:"var(--soft)",marginBottom:4}},"原圖"),
+        e("div",{className:"grid2",style:{gridTemplateColumns:"repeat(4,1fr)",width:172}},
+          state.original.map((ic,i)=> e("div",{key:i,className:"cardTile",style:{cursor:"default",fontSize:18}},ic)))),
+      e("div",null,
+        e("div",{style:{textAlign:"center",fontSize:12,color:"var(--soft)",marginBottom:4}},"找不同"),
+        e("div",{className:"grid2",style:{gridTemplateColumns:"repeat(4,1fr)",width:172}},
+          state.modified.map((ic,i)=> e("div",{key:i,className:"cardTile",style:{fontSize:18,...cellStyle(i,true)},onClick:()=>clickCell(i)},ic))))),
+    e(GiveUp,{onLose:lose}));
+}
+
+// ---- 3. 推箱子 ----
+const SOKOBAN_LAYOUTS = [
+[
+"#######",
+"#..T..#",
+"#.###.#",
+"#..B..#",
+"#.###.#",
+"#..P..#",
+"#######"
+],
+[
+"#######",
+"#.T...#",
+"#.#.###",
+"#.B...#",
+"#.#.###",
+"#.P...#",
+"#######"
+]
+];
+function parseLayout(layout){
+  const grid = layout.map(r=>r.split(""));
+  let player=null, box=null, target=null;
+  grid.forEach((row,r)=>row.forEach((ch,c)=>{
+    if(ch==='P'){player={r,c};}
+    if(ch==='B'){box={r,c};}
+    if(ch==='T'){target={r,c};}
+  }));
+  return {grid, player, box, target};
+}
+function SokobanGame({onWin,onLose,maxMoves=16}){
+  const [win,lose] = useGuardedResult(onWin,onLose);
+  const [init] = useState(()=>parseLayout(pick(SOKOBAN_LAYOUTS)));
+  const [player,setPlayer] = useState(init.player);
+  const [box,setBox] = useState(init.box);
+  const [moves,setMoves] = useState(0);
+  const isWall = (r,c) => init.grid[r][c] === '#';
+
+  function move(dr,dc){
+    const nr=player.r+dr, nc=player.c+dc;
+    if(isWall(nr,nc)) return;
+    let newBox = box;
+    if(box.r===nr && box.c===nc){
+      const br=box.r+dr, bc=box.c+dc;
+      if(isWall(br,bc)) return;
+      newBox = {r:br,c:bc};
+    }
+    setPlayer({r:nr,c:nc});
+    setBox(newBox);
+    const nm = moves+1; setMoves(nm);
+    if(newBox.r===init.target.r && newBox.c===init.target.c){
+      setTimeout(win,300);
+    } else if(nm>=maxMoves){
+      setTimeout(lose,300);
+    }
+  }
+
+  return e("div",null,
+    e("div",{className:"pTitle"},"推箱迷城"),
+    e("div",{className:"pDesc"},"用方向鍵把箱子 📦 推到目標 🎯 上。步數上限 ",maxMoves," （已走 ",moves," 步）"),
+    e("div",{className:"centerCol"},
+      e("div",{className:"mazeGrid",style:{gridTemplateColumns:`repeat(${init.grid[0].length},34px)`}},
+        init.grid.map((row,r)=>row.map((ch,c)=>{
+          let content = "";
+          let bg = "#EFE4C4";
+          if(ch==='#'){ bg="#1C2622"; }
+          else if(init.target.r===r && init.target.c===c && !(box.r===r&&box.c===c)) { content="🎯"; }
+          if(box.r===r && box.c===c){ content = (box.r===init.target.r&&box.c===init.target.c) ? "✅" : "📦"; }
+          if(player.r===r && player.c===c){ content = "🧑"; }
+          return e("div",{key:`${r}-${c}`,className:"mazeCell",style:{background:bg}},content);
+        }))),
+      e("div",{className:"arrowPad"},
+        e("div",null),e("button",{className:"arrowBtn",onClick:()=>move(-1,0)},"↑"),e("div",null),
+        e("button",{className:"arrowBtn",onClick:()=>move(0,-1)},"←"),
+        e("button",{className:"arrowBtn",onClick:()=>move(1,0)},"↓"),
+        e("button",{className:"arrowBtn",onClick:()=>move(0,1)},"→"))),
+    e(GiveUp,{onLose:lose}));
+}
+
+// ---- 4. 規律密碼 ----
+function genNumberRound(){
+  const kind = pick(['arith','geom']);
+  if(kind==='arith'){
+    const start = randInt(1,10), diff = randInt(2,6)*pick([1,1,-1]);
+    const seq = [0,1,2,3].map(i=>start+diff*i);
+    const answer = start+diff*4;
+    const options = shuffle([answer, answer+diff*pick([1,-1])||answer+1, answer+randInt(1,3), answer-randInt(1,3)]);
+    return {prompt:`${seq.join('、')}、？`, options:[...new Set(options)].slice(0,4).length===4?[...new Set(options)]:shuffle([answer,answer+1,answer+2,answer-1]), answer};
+  } else {
+    const start = randInt(1,3), ratio=2;
+    const seq=[0,1,2,3].map(i=>start*Math.pow(ratio,i));
+    const answer = start*Math.pow(ratio,4);
+    const options = shuffle([answer, answer+ratio, Math.round(answer/ratio*1.5), answer-2]);
+    return {prompt:`${seq.join('、')}、？`, options:[...new Set(options)].slice(0,4).length===4?[...new Set(options)]:shuffle([answer,answer+2,answer-2,answer+4]), answer};
+  }
+}
+function genShapeRound(){
+  const pools = [['🔴','🔵'],['🔺','🔺','🔵'],['⭐','⭐','🌙']];
+  const cycle = pick(pools);
+  const seq = Array.from({length:5},(_,i)=>cycle[i%cycle.length]);
+  const answer = cycle[5%cycle.length];
+  const allEmoji = ['🔴','🔵','🔺','⭐','🌙','🟢'];
+  const options = shuffle([...new Set([answer, ...shuffle(allEmoji.filter(x=>x!==answer)).slice(0,3)])]);
+  return {prompt:seq.join(' '), options, answer, isEmoji:true};
+}
+function SequenceGame({onWin,onLose,rounds=3,needCorrect=2}){
+  const [win,lose] = useGuardedResult(onWin,onLose);
+  const [data] = useState(()=>Array.from({length:rounds},()=> pick([genNumberRound,genShapeRound])()));
+  const [idx,setIdx] = useState(0);
+  const [correctCount,setCorrectCount] = useState(0);
+  const [picked,setPicked] = useState(null);
+  const cur = data[idx];
+
+  function choose(opt){
+    if(picked!==null) return;
+    setPicked(opt);
+    const ok = opt===cur.answer;
+    const newCount = correctCount + (ok?1:0);
+    setCorrectCount(newCount);
+    setTimeout(()=>{
+      if(idx+1 >= rounds){
+        if(newCount >= needCorrect) win(); else lose();
+      } else {
+        setIdx(idx+1); setPicked(null);
+      }
+    },700);
+  }
+
+  return e("div",null,
+    e("div",{className:"pTitle"},"規律密碼"),
+    e("div",{className:"pDesc"},"第 ",idx+1," / ",rounds," 題，需答對 ",needCorrect," 題以上才能過關"),
+    e("div",{style:{fontSize:cur.isEmoji?26:22,fontWeight:800,textAlign:"center",margin:"18px 0",fontFamily:"var(--mono)"}},cur.prompt),
+    e("div",{className:"choiceGrid",style:{maxWidth:340,margin:"0 auto"}},
+      cur.options.map((opt,i)=> e("button",{
+        key:i,
+        className:"choiceBtn",
+        style: picked!==null ? {
+          background: opt===cur.answer ? "var(--teal-soft)" : (opt===picked ? "var(--red-soft)" : "#fff"),
+          borderColor: opt===cur.answer ? "var(--teal)" : (opt===picked ? "var(--red)" : "var(--line)")
+        } : {},
+        onClick:()=>choose(opt)
+      }, String(opt)))),
+    e(GiveUp,{onLose:lose}));
+}
+
+// ---- 5. 24點 ----
+function canMake24(nums){
+  if(nums.length===1) return Math.abs(nums[0]-24)<1e-6;
+  for(let i=0;i<nums.length;i++){
+    for(let j=0;j<nums.length;j++){
+      if(i===j) continue;
+      const rest = nums.filter((_,idx)=>idx!==i&&idx!==j);
+      const a=nums[i], b=nums[j];
+      const cands = [a+b, a-b, a*b];
+      if(Math.abs(b)>1e-9) cands.push(a/b);
+      for(const c of cands){ if(canMake24([...rest,c])) return true; }
+    }
+  }
+  return false;
+}
+function gen24(){
+  for(let tries=0; tries<300; tries++){
+    const nums = Array.from({length:4},()=>randInt(1,9));
+    if(canMake24(nums)) return nums;
+  }
+  return [1,2,3,4].map(()=>randInt(1,9));
+}
+function TwentyFourGame({onWin,onLose}){
+  const [win,lose] = useGuardedResult(onWin,onLose);
+  const [original] = useState(()=>gen24());
+  const [tiles,setTiles] = useState(()=>original.map((v,i)=>({id:i+'-0',val:v})));
+  const [selIdx,setSelIdx] = useState(null);
+  const [op,setOp] = useState(null);
+  const [tries,setTries] = useState(0);
+  const MAX_TRIES = 5;
+
+  function resetTiles(){ setTiles(original.map((v,i)=>({id:i+'-'+Math.random(),val:v}))); setSelIdx(null); setOp(null); }
+
+  function pickTile(i){
+    if(selIdx===null){ setSelIdx(i); return; }
+    if(selIdx===i){ setSelIdx(null); return; }
+    if(!op){ return; }
+    const a = tiles[selIdx].val, b = tiles[i].val;
+    let result;
+    if(op==='+') result = a+b;
+    else if(op==='-') result = a-b;
+    else if(op==='×') result = a*b;
+    else if(op==='÷'){ if(b===0){ return; } result = a/b; }
+    const rest = tiles.filter((_,idx)=>idx!==selIdx && idx!==i);
+    const nextTiles = [...rest, {id:Math.random()+'', val: Math.round(result*1000)/1000}];
+    setTiles(nextTiles); setSelIdx(null); setOp(null);
+    if(nextTiles.length===1){
+      if(Math.abs(nextTiles[0].val-24)<1e-6){ setTimeout(win,300); }
+      else {
+        const nt = tries+1; setTries(nt);
+        if(nt>=MAX_TRIES){ setTimeout(lose,400); }
+        else { setTimeout(resetTiles,700); }
+      }
+    }
+  }
+
+  return e("div",null,
+    e("div",{className:"pTitle"},"24 點挑戰"),
+    e("div",{className:"pDesc"},"依序點兩個數字、選一個運算，把 4 個數字合成 24。剩餘嘗試次數：",MAX_TRIES-tries),
+    e("div",{style:{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap",margin:"18px 0"}},
+      tiles.map((t,i)=> e("button",{key:t.id,className:`numTile ${selIdx===i?"sel":""}`,onClick:()=>pickTile(i)}, Number.isInteger(t.val)? t.val : t.val.toFixed(2)))),
+    e("div",{style:{display:"flex",gap:8,justifyContent:"center"}},
+      ['+','-','×','÷'].map(o=> e("button",{key:o,className:"opBtn",style:op===o?{background:"var(--teal)",color:"#fff",borderColor:"#1E5951"}:{},onClick:()=>setOp(o)},o))),
+    e("div",{className:"mini-note"},"先選數字 → 再選運算符號 → 再選第二個數字"),
+    e("div",{style:{display:"flex",justifyContent:"center",marginTop:10}},
+      e("button",{className:"btn gh",onClick:resetTiles},"重新排列")),
+    e(GiveUp,{onLose:lose}));
+}
+
+// ---- 6. 成語謎陣 ----
+const IDIOM_BANK = [
+  {clue:'形容做事非常小心謹慎，像走在薄冰上', answer:'如履薄冰', options:['如履薄冰','畫蛇添足','守株待兔','狐假虎威']},
+  {clue:'比喻多此一舉，做了不必要的事', answer:'畫蛇添足', options:['畫蛇添足','井底之蛙','亡羊補牢','對牛彈琴']},
+  {clue:'比喻見識淺薄，看不到廣大的世界', answer:'井底之蛙', options:['井底之蛙','如魚得水','畫龍點睛','東施效顰']},
+  {clue:'比喻事情發生後想辦法補救，還來得及', answer:'亡羊補牢', options:['亡羊補牢','杯弓蛇影','掩耳盜鈴','塞翁失馬']},
+  {clue:'形容抓住重點，使整體更生動', answer:'畫龍點睛', options:['畫龍點睛','班門弄斧','愚公移山','南轅北轍']},
+  {clue:'比喻仗著別人的勢力來欺負別人', answer:'狐假虎威', options:['狐假虎威','鶴立雞群','杯水車薪','四面楚歌']},
+  {clue:'比喻不聽別人的話，白費力氣說給不懂的人聽', answer:'對牛彈琴', options:['對牛彈琴','畫蛇添足','守株待兔','刻舟求劍']},
+  {clue:'比喻死守經驗，不知道變通', answer:'守株待兔', options:['守株待兔','刻舟求劍','亡羊補牢','井底之蛙']},
+  {clue:'比喻自己嚇自己，疑神疑鬼', answer:'杯弓蛇影', options:['杯弓蛇影','掩耳盜鈴','狐假虎威','畫龍點睛']},
+  {clue:'比喻自欺欺人，掩蓋不了事實', answer:'掩耳盜鈴', options:['掩耳盜鈴','塞翁失馬','亡羊補牢','班門弄斧']},
+  {clue:'比喻在行家面前賣弄本領，不自量力', answer:'班門弄斧', options:['班門弄斧','南轅北轍','愚公移山','四面楚歌']},
+  {clue:'比喻做事的方向跟目標完全相反', answer:'南轅北轍', options:['南轅北轍','愚公移山','四面楚歌','鶴立雞群']}
+];
+function IdiomGame({onWin,onLose,rounds=3,needCorrect=2}){
+  const [win,lose] = useGuardedResult(onWin,onLose);
+  const [data] = useState(()=>shuffle(IDIOM_BANK).slice(0,rounds).map(q=>({...q, options:shuffle(q.options)})));
+  const [idx,setIdx] = useState(0);
+  const [correctCount,setCorrectCount] = useState(0);
+  const [picked,setPicked] = useState(null);
+  const cur = data[idx];
+
+  function choose(opt){
+    if(picked!==null) return;
+    setPicked(opt);
+    const ok = opt===cur.answer;
+    const newCount = correctCount + (ok?1:0);
+    setCorrectCount(newCount);
+    setTimeout(()=>{
+      if(idx+1>=rounds){ if(newCount>=needCorrect) win(); else lose(); }
+      else { setIdx(idx+1); setPicked(null); }
+    },700);
+  }
+  return e("div",null,
+    e("div",{className:"pTitle"},"成語謎陣"),
+    e("div",{className:"pDesc"},"第 ",idx+1," / ",rounds," 題，需答對 ",needCorrect," 題以上"),
+    e("div",{style:{fontSize:15,fontWeight:700,textAlign:"center",margin:"16px 0",lineHeight:1.7}},cur.clue),
+    cur.options.map((opt,i)=> e("button",{
+      key:i,
+      className:"optBtn",
+      style: picked!==null ? {
+        borderColor: opt===cur.answer ? "var(--teal)" : (opt===picked?"var(--red)":"var(--line)"),
+        background: opt===cur.answer ? "var(--teal-soft)" : (opt===picked?"var(--red-soft)":"#fff")
+      } : {},
+      onClick:()=>choose(opt)
+    }, opt)),
+    e(GiveUp,{onLose:lose}));
+}
+
+// ---- 7. 迷宮 ----
+const MAZES = [
+["#######","#S....#","#####.#","#.....#","#.#####","#....G#","#######"],
+["#######","#S.##.#","#.##..#","#....##","##.#..#","#....G#","#######"]
+];
+function findChar(layout,ch){
+  for(let r=0;r<layout.length;r++){ const c=layout[r].indexOf(ch); if(c!==-1) return {r,c}; }
+  return null;
+}
+function MazeGame({onWin,onLose,layout,moveLimit=26}){
+  const [win,lose] = useGuardedResult(onWin,onLose);
+  const [init] = useState(()=>{
+    const lay = layout || pick(MAZES);
+    return {grid: lay.map(r=>r.split("")), start: findChar(lay,'S'), goal: findChar(lay,'G')};
+  });
+  const [pos,setPos] = useState(init.start);
+  const [moves,setMoves] = useState(0);
+  const isWall = (r,c) => !init.grid[r] || init.grid[r][c]===undefined || init.grid[r][c]==='#';
+
+  function move(dr,dc){
+    const nr=pos.r+dr, nc=pos.c+dc;
+    if(isWall(nr,nc)) return;
+    setPos({r:nr,c:nc});
+    const nm=moves+1; setMoves(nm);
+    if(nr===init.goal.r && nc===init.goal.c){ setTimeout(win,300); }
+    else if(nm>=moveLimit){ setTimeout(lose,300); }
+  }
+
+  return e("div",null,
+    e("div",{className:"pTitle"},"迷宮試煉"),
+    e("div",{className:"pDesc"},"用方向鍵走出迷宮，抵達 🚩。步數上限 ",moveLimit," （已走 ",moves," 步）"),
+    e("div",{className:"centerCol"},
+      e("div",{className:"mazeGrid",style:{gridTemplateColumns:`repeat(${init.grid[0].length},34px)`}},
+        init.grid.map((row,r)=>row.map((ch,c)=>{
+          let bg = ch==='#' ? "#1C2622" : "#EFE4C4";
+          let content = "";
+          if(init.goal.r===r && init.goal.c===c && !(pos.r===r&&pos.c===c)) content="🚩";
+          if(pos.r===r && pos.c===c) content="🧑";
+          return e("div",{key:`${r}-${c}`,className:"mazeCell",style:{background:bg}},content);
+        }))),
+      e("div",{className:"arrowPad"},
+        e("div",null),e("button",{className:"arrowBtn",onClick:()=>move(-1,0)},"↑"),e("div",null),
+        e("button",{className:"arrowBtn",onClick:()=>move(0,-1)},"←"),
+        e("button",{className:"arrowBtn",onClick:()=>move(1,0)},"↓"),
+        e("button",{className:"arrowBtn",onClick:()=>move(0,1)},"→"))),
+    e(GiveUp,{onLose:lose}));
+}
+
+// ---- 8. 數獨 4x4 ----
+const SUDOKU_BASE = [[1,2,3,4],[3,4,1,2],[2,1,4,3],[4,3,2,1]];
+function genSudoku(blanks=6){
+  const perm = shuffle([1,2,3,4]);
+  const solved = SUDOKU_BASE.map(row=>row.map(v=>perm[v-1]));
+  const cells = shuffle(Array.from({length:16},(_,i)=>i)).slice(0,blanks);
+  const puzzle = solved.map(row=>[...row]);
+  cells.forEach(idx=>{ puzzle[Math.floor(idx/4)][idx%4] = 0; });
+  return {puzzle, blankSet:new Set(cells)};
+}
+function checkSudokuValid(grid){
+  for(let i=0;i<4;i++){
+    const row = grid[i], col = grid.map(r=>r[i]);
+    if(row.includes(0) || col.includes(0)) return false;
+    if(new Set(row).size!==4 || new Set(col).size!==4) return false;
+  }
+  const boxes = [[0,0],[0,2],[2,0],[2,2]];
+  for(const [br,bc] of boxes){
+    const vals = [grid[br][bc],grid[br][bc+1],grid[br+1][bc],grid[br+1][bc+1]];
+    if(new Set(vals).size!==4) return false;
+  }
+  return true;
+}
+function SudokuGame({onWin,onLose}){
+  const [win,lose] = useGuardedResult(onWin,onLose);
+  const [data] = useState(()=>genSudoku(6));
+  const [grid,setGrid] = useState(()=>data.puzzle.map(r=>[...r]));
+  const [selected,setSelected] = useState(null);
+  const [tries,setTries] = useState(0);
+  const MAX_TRIES = 6;
+
+  function selectCell(r,c){ if(data.blankSet.has(r*4+c)) setSelected({r,c}); }
+  function setNum(n){
+    if(!selected) return;
+    const ng = grid.map(row=>[...row]);
+    ng[selected.r][selected.c] = n;
+    setGrid(ng);
+  }
+  function check(){
+    const filled = grid.every(row=>row.every(v=>v!==0));
+    if(!filled) return;
+    if(checkSudokuValid(grid)){ win(); }
+    else {
+      const nt = tries+1; setTries(nt);
+      if(nt>=MAX_TRIES) lose();
+    }
+  }
+  return e("div",null,
+    e("div",{className:"pTitle"},"數獨要塞"),
+    e("div",{className:"pDesc"},"每列、每行、每個 2x2 方框都要填滿 1~4 且不重複。檢查次數上限 ",MAX_TRIES," （已用 ",tries,"）"),
+    e("div",{className:"centerCol"},
+      e("div",{className:"sudokuGrid"},
+        grid.map((row,r)=>row.map((v,c)=>{
+          const isFixed = !data.blankSet.has(r*4+c);
+          const isSel = selected && selected.r===r && selected.c===c;
+          return e("div",{key:`${r}-${c}`,className:`sudokuCell ${isFixed?"fixed":""} ${isSel?"sel":""}`,onClick:()=>selectCell(r,c)}, v||"");
+        }))),
+      e("div",{className:"padRow",style:{marginBottom:12}},
+        [1,2,3,4].map(n=> e("button",{key:n,className:"numTile",onClick:()=>setNum(n)},n)),
+        e("button",{className:"numTile",onClick:()=>setNum(0)},"×")),
+      e("button",{className:"btn pri",onClick:check},"檢查答案")),
+    e(GiveUp,{onLose:lose}));
+}
+
+// ---- 9. 推理密室 ----
+const LOGIC_PUZZLES = [
+  {
+    text:'小安、小博、小晴、小雨四人，每人喜歡一種水果：蘋果、香蕉、葡萄、橘子（不重複）。\n① 小安不喜歡蘋果和香蕉。\n② 小博喜歡葡萄。\n③ 小晴不喜歡橘子。\n④ 小雨喜歡蘋果。',
+    question:'請問小安喜歡哪種水果？', options:['蘋果','香蕉','葡萄','橘子'], answer:'橘子'
+  },
+  {
+    text:'三位同學參加賽跑，得到第一、二、三名：阿凱、小蓉、阿德。\n① 阿凱不是第一名。\n② 小蓉比阿德先到終點。\n③ 阿德不是最後一名。',
+    question:'請問誰是第一名？', options:['阿凱','小蓉','阿德'], answer:'小蓉'
+  },
+  {
+    text:'小竹、小雨、小晴三人，養的寵物分別是狗、貓、鳥其中一種（不重複）。\n① 小竹沒有養鳥。\n② 小雨養的不是貓也不是狗。\n③ 小晴沒有養貓。',
+    question:'請問小雨養什麼寵物？', options:['狗','貓','鳥'], answer:'鳥'
+  }
+];
+function LogicGame({onWin,onLose}){
+  const [win,lose] = useGuardedResult(onWin,onLose);
+  const [q] = useState(()=>{ const p = pick(LOGIC_PUZZLES); return {...p, options: shuffle(p.options)}; });
+  const [picked,setPicked] = useState(null);
+  function choose(opt){
+    if(picked!==null) return;
+    setPicked(opt);
+    setTimeout(()=>{ if(opt===q.answer) win(); else lose(); },700);
+  }
+  return e("div",null,
+    e("div",{className:"pTitle"},"推理密室"),
+    e("div",{className:"pDesc"},"仔細看線索，只有一次作答機會！"),
+    e("div",{style:{whiteSpace:"pre-line",fontSize:14,lineHeight:1.8,background:"#fff",border:"1px solid var(--line)",borderRadius:12,padding:14,marginBottom:14}},q.text),
+    e("div",{style:{fontWeight:800,marginBottom:10}},q.question),
+    q.options.map((opt,i)=> e("button",{
+      key:i, className:"optBtn",
+      style: picked!==null ? {
+        borderColor: opt===q.answer?"var(--teal)":(opt===picked?"var(--red)":"var(--line)"),
+        background: opt===q.answer?"var(--teal-soft)":(opt===picked?"var(--red-soft)":"#fff")
+      } : {},
+      onClick:()=>choose(opt)
+    }, opt)),
+    e(GiveUp,{onLose:lose}));
+}
+
+// ---- 10. 王者試煉（三階段）----
+function BossGame({onWin,onLose}){
+  const [win,lose] = useGuardedResult(onWin,onLose);
+  const [stage,setStage] = useState(0);
+  const bossMaze = ["#####","#S..#","###.#","###G#","#####"];
+  return e("div",null,
+    e("div",{className:"pTitle"},"王者試煉"),
+    e("div",{className:"pDesc"},"連續完成三個關卡才能通過，中途失敗就得重新挑戰整個王者試煉！"),
+    e("div",{className:"stageDots"},[0,1,2].map(i=> e("span",{key:i,className:i<stage?"done":(i===stage?"on":"")}))),
+    stage===0 && e(MemoryGame,{key:"s0",pairCount:3,maxMoves:8,onWin:()=>setStage(1),onLose:lose}),
+    stage===1 && e(SequenceGame,{key:"s1",rounds:1,needCorrect:1,onWin:()=>setStage(2),onLose:lose}),
+    stage===2 && e(MazeGame,{key:"s2",layout:bossMaze,moveLimit:10,onWin:win,onLose:lose}));
+}
+
+const LEVEL_COMPONENTS = {
+  memory:MemoryGame, spotdiff:SpotDiffGame, sokoban:SokobanGame, sequence:SequenceGame,
+  twentyfour:TwentyFourGame, idiom:IdiomGame, maze:MazeGame, sudoku:SudokuGame,
+  logic:LogicGame, boss:BossGame
+};
+
+// ============================================================
+// 畫面元件
+// ============================================================
+
+function LoginScreen({onReady}){
+  const [loading,setLoading] = useState(true);
+  const [errMsg,setErrMsg] = useState(null);
+  const [roster,setRoster] = useState(null);
+  const [classId,setClassId] = useState(null);
+  const [joining,setJoining] = useState(false);
+
+  function load(){
+    setLoading(true); setErrMsg(null);
+    gs('gameRoster').then(r=>{
+      if(!r || !r.classes){ setErrMsg('讀不到班級名單，請確認 Apps Script 已經部署好遊戲後端。'); setLoading(false); return; }
+      setRoster(r); setLoading(false);
+    }).catch(err=>{ setErrMsg(err.message); setLoading(false); });
+  }
+  useEffect(load,[]);
+
+  async function pickStudent(cls, s){
+    setJoining(true);
+    try{
+      const status = await gs('gameStatus', {className:cls.name, studentId:s.id, studentName:s.name});
+      onReady({className:cls.name, studentId:s.id, studentName:s.name, points:status.points||0, completed:(status.gameProgress&&status.gameProgress.completed)||[]});
+    }catch(err){
+      setErrMsg(err.message); setJoining(false);
+    }
+  }
+
+  if(loading) return e("div",{className:"center-loading"},"連線中，正在讀取班級名單…");
+  if(errMsg) return e("div",{className:"wrap"},
+    e("div",{className:"brandhead"},e("div",{className:"em"},"🗺️"),e("h1",null,"闖關挑戰")),
+    e("div",{className:"panel"},
+      e("div",{className:"err-box"},"連線失敗：",errMsg),
+      e("div",{style:{marginTop:14,textAlign:"center"}},e("button",{className:"btn pri",onClick:load},"重試"))));
+
+  const classes = roster.classes;
+  if(!classId){
+    return e("div",{className:"wrap"},
+      e("div",{className:"brandhead"},e("div",{className:"em"},"🗺️"),e("h1",null,"闖關挑戰"),e("div",{className:"sub"},"花分數挑戰關卡，看誰能破關！")),
+      e("div",{className:"panel"},
+        e("div",{className:"stepTitle"},"第一步：選擇你的班級"),
+        e("div",{className:"choiceGrid"},
+          classes.map(c=> e("button",{key:c.id,className:"choiceBtn",onClick:()=>setClassId(c.id)}, c.name)))));
+  }
+  const cls = classes.find(c=>c.id===classId);
+  return e("div",{className:"wrap"},
+    e("div",{className:"brandhead"},e("div",{className:"em"},"🗺️"),e("h1",null,"闖關挑戰"),e("div",{className:"sub"},cls.name)),
+    e("div",{className:"panel"},
+      e("div",{className:"stepTitle"},"第二步：你是誰？"),
+      e("div",{className:"choiceGrid"},
+        cls.students.map(s=> e("button",{
+          key:s.id, className:"choiceBtn", disabled:joining,
+          onClick:()=>pickStudent(cls,s)
+        }, s.name))),
+      e("div",{className:"mini-note"},"選了自己的名字後，只會看到你自己的分數，不會看到同學的。"),
+      e("div",{style:{marginTop:14,textAlign:"center"}},
+        e("button",{className:"btn gh",disabled:joining,onClick:()=>setClassId(null)},"← 換班級"))));
+}
+
+function ConfirmModal({level,points,onConfirm,onCancel}){
+  const enough = points >= level.cost;
+  return e("div",{className:"overlay",onClick:onCancel},
+    e("div",{className:"modalBox",onClick:ev=>ev.stopPropagation()},
+      e("h3",null,"挑戰「",level.name,"」？"),
+      e("p",null, enough
+        ? `需要花費 ${level.cost} 分。挑戰失敗分數不退還，成功才能解鎖「${level.badgeName}」徽章。`
+        : `這關需要 ${level.cost} 分，你目前只有 ${points} 分，分數不夠喔！`),
+      e("div",{className:"btnRow"},
+        e("button",{className:"btn gh",onClick:onCancel},"取消"),
+        enough && e("button",{className:"btn gold",onClick:onConfirm},"確定挑戰"))));
+}
+
+function MapScreen({player,setPlayer,onPlay,onBadges,onSwitch}){
+  const [confirmLevel,setConfirmLevel] = useState(null);
+  const [busy,setBusy] = useState(false);
+  const [toast,setToast] = useState(null);
+
+  function statusOf(level){
+    if(player.completed.includes(level.id)) return "done";
+    const prevOk = level.id===1 || player.completed.includes(level.id-1);
+    if(!prevOk) return "locked";
+    if(player.points < level.cost) return "poor";
+    return "open";
+  }
+
+  async function startLevel(level){
+    setBusy(true);
+    try{
+      const res = await gs('gamePlay', {phase:'start', className:player.className, studentId:player.studentId, studentName:player.studentName, levelId:level.id, levelName:level.name, cost:level.cost});
+      setPlayer(p=>({...p, points: res.points}));
+      setConfirmLevel(null);
+      onPlay(level);
+    }catch(err){
+      setToast(err.message);
+      setTimeout(()=>setToast(null),2600);
+    }
+    setBusy(false);
+  }
+
+  return e("div",{className:"wrap"},
+    toast && e("div",{className:"overlay",onClick:()=>setToast(null)},
+      e("div",{className:"modalBox"},e("h3",null,"喔喔"),e("p",null,toast),e("div",{className:"btnRow"},e("button",{className:"btn pri",onClick:()=>setToast(null)},"了解")))),
+    confirmLevel && e(ConfirmModal,{
+      level:confirmLevel, points:player.points,
+      onCancel:()=>setConfirmLevel(null),
+      onConfirm:()=>startLevel(confirmLevel)
+    }),
+    e("div",{className:"topbar"},
+      e("div",null, e("div",{className:"who"},player.studentName), e("div",{className:"cls"},player.className)),
+      e("div",{className:"spring"}),
+      e("div",{className:"ptsPill"},player.points," 分"),
+      e("button",{className:"iconBtn",onClick:onBadges},"🏅 徽章牆"),
+      e("button",{className:"iconBtn",onClick:onSwitch},"↩️ 換人")),
+    e("div",{className:"trail"},
+      LEVELS.map(level=>{
+        const st = statusOf(level);
+        const circleCls = st==='done'?'done':(st==='open'?'open':(st==='poor'?'poor':'locked'));
+        const tagText = st==='done'?'已通關':(st==='open'?'可以挑戰':(st==='poor'?`分數不足（需 ${level.cost}）`:'先過前一關'));
+        return e("div",{key:level.id,className:"node"},
+          e("div",{className:"line"}),
+          e("div",{className:`badgeCircle ${circleCls}`}, st==='done'?level.badge:level.id),
+          e("div",{className:"nodeBody"},
+            e("div",{className:"top1"}, e("span",{className:"nm"},level.name), e("span",{className:"cost"},level.cost," 分")),
+            e("div",{className:"desc"},level.desc),
+            e("span",{className:`stateTag ${circleCls}`},tagText),
+            st==='open' && e("div",{className:"playBtnRow"},
+              e("button",{className:"btn gold",disabled:busy,onClick:()=>setConfirmLevel(level)},"開始挑戰"))));
+      })));
+}
+
+function PlayScreen({level,onFinish}){
+  const Comp = LEVEL_COMPONENTS[level.type];
+  const [busy,setBusy] = useState(false);
+  async function finish(success){
+    if(busy) return; setBusy(true);
+    onFinish(level, success);
+  }
+  return e("div",{className:"wrap"},
+    e("div",{className:"playHead"}, e("span",{className:"lv"},"第 ",level.id," 關．",level.name), e("span",{className:"spring"})),
+    e("div",{className:"puzzleWrap"}, e(Comp,{onWin:()=>finish(true), onLose:()=>finish(false)})));
+}
+
+function ResultScreen({level,success,onBack}){
+  return e("div",{className:"wrap"},
+    e("div",{className:"resultWrap"},
+      e("div",{className:"emoji"}, success ? "🎉" : "💧"),
+      e("h2",null, success ? "挑戰成功！" : "這次沒有過關"),
+      e("p",null, success ? "分數已經扣除，恭喜解鎖新徽章：" : "花費的分數不會退還，別灰心，下次再挑戰！"),
+      success && e("div",{className:"badgeShow"}, e("div",{className:"em"},level.badge), e("div",{className:"nm"},level.badgeName)),
+      e("button",{className:"btn gold",onClick:onBack},"返回地圖")));
+}
+
+function BadgeWallScreen({player,onBack}){
+  return e("div",{className:"wrap"},
+    e("div",{className:"topbar"}, e("div",{className:"who"},player.studentName,"的徽章牆"), e("div",{className:"spring"}),
+      e("button",{className:"iconBtn",onClick:onBack},"← 回地圖")),
+    e("div",{className:"badgeGrid"},
+      LEVELS.map(level=>{
+        const got = player.completed.includes(level.id);
+        return e("div",{key:level.id,className:`badgeCard ${got?"got":""}`},
+          e("span",{className:"em"}, got ? level.badge : "🔒"),
+          e("div",{className:"nm"}, got ? level.badgeName : "尚未解鎖"),
+          e("div",{className:"st"}, "第",level.id,"關"));
+      })));
+}
+
+function App(){
+  const [player,setPlayer] = useState(null);
+  const [screen,setScreen] = useState('map');
+  const [activeLevel,setActiveLevel] = useState(null);
+  const [lastResult,setLastResult] = useState(null);
+
+  if(!player) return e(LoginScreen,{onReady:setPlayer});
+
+  if(screen==='badges') return e(BadgeWallScreen,{player,onBack:()=>setScreen('map')});
+
+  if(screen==='play' && activeLevel) return e(PlayScreen,{
+    level:activeLevel,
+    onFinish:(level,success)=>{
+      gs('gamePlay',{phase:'finish', className:player.className, studentId:player.studentId, studentName:player.studentName, levelId:level.id, levelName:level.name, badgeName:level.badgeName, success})
+        .then(res=>{
+          setPlayer(p=>({...p, points: res.points!=null?res.points:p.points, completed: res.completed||p.completed}));
+        })
+        .catch(()=>{})
+        .finally(()=>{ setLastResult({level,success}); setScreen('result'); });
+    }
+  });
+
+  if(screen==='result' && lastResult) return e(ResultScreen,{
+    level:lastResult.level, success:lastResult.success,
+    onBack:()=>{ setActiveLevel(null); setLastResult(null); setScreen('map'); }
+  });
+
+  return e(MapScreen,{
+    player, setPlayer,
+    onPlay:(level)=>{ setActiveLevel(level); setScreen('play'); },
+    onBadges:()=>setScreen('badges'),
+    onSwitch:()=>{ setPlayer(null); setScreen('map'); }
+  });
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(e(App,null));
+</script>
+</body>
+</html>
