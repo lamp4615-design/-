@@ -132,7 +132,7 @@ const e = React.createElement;
 // ============================================================
 // ⚙️ 設定：跟班級經濟計分板使用同一個 Apps Script 部署網址
 // ============================================================
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw2LVxfHmnlggbhP5qH59mj_rOfdPkeit75peHD-GIwMBro6Ys2sNMPlBy6yaJTvKo/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzhuj80ozTlDJMka5TEvNCjdvj5fMFepQnckJ8c-wveTD1Wg9-yl83BfVw5w-PXxgC9/exec';
 
 async function gs(action, payload) {
   const body = {action};
@@ -285,22 +285,24 @@ function SpotDiffGame({onWin,onLose}){
 }
 
 // ---- 3. 推箱子 ----
+// 這兩個版面都用 BFS 解謎程式驗證過真的能推到終點（分別最少 10 步、7 步），
+// 不是憑感覺畫的地圖。
 const SOKOBAN_LAYOUTS = [
 [
 "#######",
 "#..T..#",
-"#.###.#",
+"#..#..#",
 "#..B..#",
-"#.###.#",
-"#..P..#",
+"#.....#",
+"#.P...#",
 "#######"
 ],
 [
 "#######",
-"#.T...#",
-"#.#.###",
+"#...T.#",
+"#...#.#",
 "#.B...#",
-"#.#.###",
+"#.....#",
 "#.P...#",
 "#######"
 ]
@@ -315,7 +317,7 @@ function parseLayout(layout){
   }));
   return {grid, player, box, target};
 }
-function SokobanGame({onWin,onLose,maxMoves=16}){
+function SokobanGame({onWin,onLose,maxMoves=20}){
   const [win,lose] = useGuardedResult(onWin,onLose);
   const [init] = useState(()=>parseLayout(pick(SOKOBAN_LAYOUTS)));
   const [player,setPlayer] = useState(init.player);
