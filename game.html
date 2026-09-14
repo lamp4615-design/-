@@ -285,26 +285,38 @@ function SpotDiffGame({onWin,onLose}){
 }
 
 // ---- 3. 推箱子 ----
-// 這兩個版面都用 BFS 解謎程式驗證過真的能推到終點（分別最少 10 步、7 步），
-// 不是憑感覺畫的地圖。
+// 三個版面都用 BFS 解謎程式驗證過，需要 10~12 步的最短解（比之前 7~10 步的版本更需要轉彎繞路），
+// 不是隨便畫的地圖。
 const SOKOBAN_LAYOUTS = [
 [
 "#######",
-"#..T..#",
-"#..#..#",
-"#..B..#",
+"#....T#",
+"#.###.#",
 "#.....#",
-"#.P...#",
+"#.###.#",
+"#.B...#",
+"#..P..#",
 "#######"
 ],
 [
-"#######",
-"#...T.#",
-"#...#.#",
-"#.B...#",
-"#.....#",
-"#.P...#",
-"#######"
+"########",
+"#.....T#",
+"#.####.#",
+"#......#",
+"#.####.#",
+"#..B...#",
+"#..P...#",
+"########"
+],
+[
+"#########",
+"#T......#",
+"#.#####.#",
+"#.......#",
+"#.#####.#",
+"#..B....#",
+"#..P....#",
+"#########"
 ]
 ];
 function parseLayout(layout){
@@ -317,7 +329,7 @@ function parseLayout(layout){
   }));
   return {grid, player, box, target};
 }
-function SokobanGame({onWin,onLose,maxMoves=20}){
+function SokobanGame({onWin,onLose,maxMoves=22}){
   const [win,lose] = useGuardedResult(onWin,onLose);
   const [init] = useState(()=>parseLayout(pick(SOKOBAN_LAYOUTS)));
   const [player,setPlayer] = useState(init.player);
