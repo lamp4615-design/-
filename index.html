@@ -164,7 +164,7 @@ body{margin:0;font-family:var(--cjk);color:var(--ink);background:var(--paper);-w
 // ============================================================
 // ⚙️ 設定：貼上你的 Apps Script 部署網址
 // ============================================================
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwiH-vSjYQdInKyUc2BcX5ct94b8QMXD8IYZwzLj45sA90-wRS8yS4eFSP-5qV_IEkN/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw2LVxfHmnlggbhP5qH59mj_rOfdPkeit75peHD-GIwMBro6Ys2sNMPlBy6yaJTvKo/exec';
 // 例如: 'https://script.google.com/macros/s/AKfycbzhuj80ozTlDJMka5TEvNCjdvj5fMFepQnckJ8c-wveTD1Wg9-yl83BfVw5w-PXxgC9/exec'
 // 留空時會只使用 localStorage（離線模式）
 
@@ -306,15 +306,27 @@ function App(){
   // Load
   useEffect(()=>{(async()=>{
     let blob=null;
+    let loadFailed=false;
     if(HAS_GS){
-      try{const s=await gs("getData");if(s){blob=JSON.parse(s);setSync("ok");}}
-      catch(e){setSync("err");}
+      try{const s=await gs("getData");if(s){blob=JSON.parse(s);}setSync("ok");}
+      catch(e){setSync("err");loadFailed=true;}
     }
-    if(!blob){const c=lsGet(LS_CACHE);if(c) try{blob=JSON.parse(c);}catch(_){}}
-    if(!blob) blob=defaultBlob();
-    setFromBlob(blob);
-    const cj=canon(blob);lastBlobRef.current=cj;lastRemoteRef.current=cj;
-    if(HAS_GS){try{await gs("saveData",cj);lastRemoteRef.current=cj;}catch(e){}}
+    if(loadFailed){
+      // 後端連不上：只能顯示本機備份，絕對不可以把這個暫時畫面存回雲端，
+      // 以免把雲端上的真實資料覆蓋成空白。等之後連線恢復，輪詢同步會自動抓回真實資料。
+      const c=lsGet(LS_CACHE);if(c) try{blob=JSON.parse(c);}catch(_){}
+      if(!blob) blob=defaultBlob();
+      setFromBlob(blob);
+      const cj=canon(blob);lastBlobRef.current=cj;
+      // 注意：這裡刻意不設定 lastRemoteRef.current，也不呼叫 saveData。
+    } else {
+      // 成功連上後端（不論是拿到真實資料、還是真的第一次使用回傳空白）才可以視為「目前的事實」存回去
+      if(!blob){const c=lsGet(LS_CACHE);if(c) try{blob=JSON.parse(c);}catch(_){}}
+      if(!blob) blob=defaultBlob();
+      setFromBlob(blob);
+      const cj=canon(blob);lastBlobRef.current=cj;lastRemoteRef.current=cj;
+      if(HAS_GS){try{await gs("saveData",cj);lastRemoteRef.current=cj;}catch(e){}}
+    }
     const m=lsGet(LS_MKT);if(m) try{const mm=JSON.parse(m);if(mm&&typeof mm.price==="number") setMarket(mm);}catch(_){}
     if(HAS_GS){try{const u=await gs("getDatabaseUrl");if(u) setDbUrl(u);}catch(e){}}
     setLoaded(true);
