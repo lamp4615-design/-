@@ -152,6 +152,16 @@ body{margin:0;font-family:var(--cjk);color:var(--ink);background:var(--paper);-w
 .kbtn.leave{background:var(--indigo);}
 .kbtn.practice{background:var(--gold);}
 
+/* Kiosk action grid (自助登記) */
+.kActionGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;max-width:900px;margin:0 auto;}
+.kActBtn{border:2px solid var(--line);border-radius:16px;padding:22px 10px;font-family:var(--cjk);font-size:17px;font-weight:800;cursor:pointer;background:#fff;color:var(--ink);min-height:88px;}
+.kActBtn:active{transform:scale(.96);}
+.kActBtn.pos{background:var(--green-s);border-color:var(--green);color:var(--green);}
+.kActBtn.neg{background:var(--red-s);border-color:var(--red);color:var(--red);}
+.kActBtn:disabled{opacity:.4;cursor:not-allowed;}
+.kBigPts{font-family:var(--mono);font-size:52px;font-weight:800;text-align:center;}
+.kCooldown{text-align:center;color:var(--red);font-weight:700;margin-bottom:10px;}
+
 /* Loan partial */
 .loan-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px;}
 .loan-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line);}
@@ -164,7 +174,7 @@ body{margin:0;font-family:var(--cjk);color:var(--ink);background:var(--paper);-w
 // ============================================================
 // ⚙️ 設定：貼上你的 Apps Script 部署網址
 // ============================================================
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw2LVxfHmnlggbhP5qH59mj_rOfdPkeit75peHD-GIwMBro6Ys2sNMPlBy6yaJTvKo/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzhuj80ozTlDJMka5TEvNCjdvj5fMFepQnckJ8c-wveTD1Wg9-yl83BfVw5w-PXxgC9/exec';
 // 例如: 'https://script.google.com/macros/s/AKfycbzhuj80ozTlDJMka5TEvNCjdvj5fMFepQnckJ8c-wveTD1Wg9-yl83BfVw5w-PXxgC9/exec'
 // 留空時會只使用 localStorage（離線模式）
 
@@ -247,6 +257,114 @@ function Modal({title,onClose,foot,children,lg}){
       foot && React.createElement("div",{className:"mfoot"},foot)));
 }
 
+// ===== Kiosk View（給孩子在大螢幕上自助登記用）=====
+function KioskView({students, settings, market, price, rate, className, applyDelta, open, buy, sell, repay, fInvest, setFInvest, fRepay, setFRepay, kioskStudentId, setKioskStudentId, setKioskMode, pushToast}){
+  const e = React.createElement;
+  const [screen, setScreen] = useState('actions'); // 'actions' | 'market' | 'loan'
+  const [exitPrompt, setExitPrompt] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [cooldownUntil, setCooldownUntil] = useState(0);
+  const [, forceTick] = useState(0);
+
+  useEffect(() => {
+    if (!cooldownUntil) return;
+    const iv = setInterval(() => forceTick(x => x + 1), 300);
+    return () => clearInterval(iv);
+  }, [cooldownUntil]);
+
+  const student = students.find(s => s.id === kioskStudentId);
+  const cooldownSec = (settings.kiosk && settings.kiosk.cooldown) || 8;
+  const cooldownLeft = Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000));
+  const onCooldown = cooldownLeft > 0;
+
+  function quickAction(label, delta) {
+    if (onCooldown) return;
+    applyDelta(kioskStudentId, label, delta);
+    setCooldownUntil(Date.now() + cooldownSec * 1000);
+  }
+
+  function attemptExit() {
+    if (pinInput === ((settings.kiosk && settings.kiosk.pin) || '')) {
+      setExitPrompt(false); setPinInput(''); setKioskMode(false); setKioskStudentId(null);
+    } else {
+      pushToast('PIN 錯誤', 'down');
+      setPinInput('');
+    }
+  }
+
+  const exitModal = exitPrompt && e(Modal, {
+    title: '輸入 PIN 結束大螢幕模式',
+    onClose: () => { setExitPrompt(false); setPinInput(''); },
+    foot: e(React.Fragment, null,
+      e("button", { className: "btn gh", onClick: () => { setExitPrompt(false); setPinInput(''); } }, "取消"),
+      e("button", { className: "btn pri", onClick: attemptExit }, "確認"))
+  },
+    e("div", { className: "field" },
+      e("label", null, "PIN 碼"),
+      e("input", { className: "inp mono", type: "password", autoFocus: true, value: pinInput, onChange: ev => setPinInput(ev.target.value), onKeyDown: ev => ev.key === "Enter" && attemptExit() }))
+  );
+
+  // ----- 還沒選人：大頭貼式名字牌 -----
+  if (!student) {
+    return e("div", { className: "kiosk" },
+      e("div", { className: "kiosk-top" },
+        e("h1", null, "點選你的名字"),
+        e("button", { className: "kback", onClick: () => setExitPrompt(true) }, "🔒 結束")),
+      students.length === 0
+        ? e("div", { className: "empty" }, e("h2", null, "這個班級還沒有學生"))
+        : e("div", { className: "kgrid" },
+            students.map(s => e("div", {
+              key: s.id, className: "ktile",
+              onClick: () => { setKioskStudentId(s.id); setScreen('actions'); }
+            }, s.name, e("span", { className: "kpts" }, np(s.points))))),
+      exitModal);
+  }
+
+  // ----- 投資畫面（沿用 Market，鎖定成這位學生） -----
+  if (screen === 'market') {
+    return e("div", { className: "kiosk" },
+      e("div", { className: "kiosk-top" }, e("h1", null, student.name, "．投資"),
+        e("button", { className: "kback", onClick: () => setScreen('actions') }, "← 返回")),
+      e(Market, { market, settings, students: [student], trader: student, tradeId: student.id, setTradeId: () => {}, buy, sell, fInvest, setFInvest, className, hideSelector: true }),
+      exitModal);
+  }
+
+  // ----- 借貸畫面（沿用 LoanCenter，鎖定成這位學生） -----
+  if (screen === 'loan') {
+    return e("div", { className: "kiosk" },
+      e("div", { className: "kiosk-top" }, e("h1", null, student.name, "．借貸"),
+        e("button", { className: "kback", onClick: () => setScreen('actions') }, "← 返回")),
+      e("div", { style: { display: "flex", justifyContent: "center", marginBottom: 16 } },
+        e("button", { className: "btn in", style: { fontSize: 20, padding: "14px 28px" }, onClick: () => open('borrow', student.id) }, "➕ 借入新款項")),
+      e(LoanCenter, { students: [student], rate, repay, fRepay, setFRepay }),
+      exitModal);
+  }
+
+  // ----- 主要動作畫面 -----
+  return e("div", { className: "kiosk" },
+    e("div", { className: "kiosk-top" },
+      e("h1", null, student.name),
+      e("button", { className: "kback", onClick: () => setExitPrompt(true) }, "🔒")),
+    e("div", { style: { textAlign: "center", marginBottom: 6 } },
+      e("div", { className: "note", style: { fontSize: 16 } }, className),
+      e("div", { className: "kBigPts" }, np(student.points), e("span", { style: { fontSize: 20, fontFamily: "var(--cjk)", marginLeft: 8 } }, "分"))),
+    onCooldown && e("div", { className: "kCooldown" }, "請稍候 ", cooldownLeft, " 秒再操作"),
+    e("div", { className: "kActionGrid" },
+      e("button", { className: "kActBtn pos", disabled: onCooldown, onClick: () => quickAction("答題", settings.answer) }, "✅ 答題 +", settings.answer),
+      e("button", { className: "kActBtn pos", disabled: onCooldown, onClick: () => quickAction("習作100", settings.workbook) }, "📘 習作 +", settings.workbook),
+      e("button", { className: "kActBtn pos", disabled: onCooldown, onClick: () => quickAction("協助同學解決錯題", settings.help) }, "🤝 助人 +", settings.help),
+      e("button", { className: "kActBtn neg", onClick: () => open("forget", student.id) }, "😅 忘記帶東西"),
+      e("button", { className: "kActBtn", onClick: () => open("exam", student.id) }, "📝 月考"),
+      e("button", { className: "kActBtn", onClick: () => open("tutor", student.id) }, "🎓 輔導"),
+      e("button", { className: "kActBtn", onClick: () => setScreen('market') }, "📈 投資"),
+      e("button", { className: "kActBtn", onClick: () => setScreen('loan') }, "🏦 借貸"),
+      e("button", { className: "kActBtn", onClick: () => open("leave", student.id) }, "🌴 請假")
+    ),
+    e("div", { style: { textAlign: "center", marginTop: 22 } },
+      e("button", { className: "btn gh", style: { fontSize: 16, padding: "12px 24px" }, onClick: () => { setKioskStudentId(null); setScreen('actions'); } }, "↩️ 換人（下一位）")),
+    exitModal);
+}
+
 // ===== Spark Chart =====
 function Spark({data}){
   if(!data||data.length<2) return React.createElement("div",{className:"note",style:{marginTop:10}},"正在累積行情資料…");
@@ -280,6 +398,7 @@ function App(){
   const [lastSaved,setLastSaved]=useState(null);
   const [sync,setSync]=useState(HAS_GS?"ok":"err");
   const [kioskMode,setKioskMode]=useState(false);
+  const [kioskStudentId,setKioskStudentId]=useState(null);
   const [dbUrl,setDbUrl]=useState("");
   // Form states
   const [fItems,setFItems]=useState([]);
@@ -513,9 +632,15 @@ function App(){
   const tabList=[["overview","總覽"],["board","記分板"],["rank","排行榜"],["market","投資市場"],["loan","借貸中心"],["set","設定"]];
 
   // ===== Render =====
-  return e("div",{className:"ce-wrap"},
-    // Toasts
+  return e(React.Fragment,null,
+    // Toasts (shared between normal view and kiosk view)
     e("div",{className:"toasts"},toasts.map(t=>e("div",{key:t.id,className:`toast ${t.tone||""}`},t.text))),
+
+    kioskMode ? e(KioskView,{
+      students, settings, market, price, rate, className:active?.name,
+      applyDelta, open, buy, sell, repay, fInvest, setFInvest, fRepay, setFRepay,
+      kioskStudentId, setKioskStudentId, setKioskMode, pushToast
+    }) : e("div",{className:"ce-wrap"},
     // Top bar
     e("div",{className:"top"},
       e("div",{className:"brand"},e("h1",null,"班級經濟計分板"),e("span",{className:"sub"},"上課帶好用具 · 積極答題 · 學會理財")),
@@ -526,7 +651,7 @@ function App(){
     // Class pills
     e("div",{className:"classbar"},
       e("span",{className:"lbl"},"班級"),
-      classList.map(c=>e("button",{key:c.id,className:`cpill ${c.id===activeId?"on":""}`,onClick:()=>{setActiveId(c.id);setTradeId(null);}},c.name,e("span",{className:"cnt"},c.students.length))),
+      classList.map(c=>e("button",{key:c.id,className:`cpill ${c.id===activeId?"on":""}`,onClick:()=>{setActiveId(c.id);setTradeId(null);setKioskStudentId(null);}},c.name,e("span",{className:"cnt"},c.students.length))),
       e("button",{className:"cadd",onClick:()=>open("addclass")},"＋ 新增班級")
     ),
     // Tabs
@@ -538,9 +663,10 @@ function App(){
     tab==="rank"&&e(Leaderboard,{ranked,price,rate,className:active?.name}),
     tab==="market"&&e(Market,{market,settings,students,trader,tradeId,setTradeId,buy,sell,fInvest,setFInvest,className:active?.name}),
     tab==="loan"&&e(LoanCenter,{students,rate,repay,fRepay,setFRepay}),
-    tab==="set"&&e(Settings,{settings,setS,open,exportData,loadDemo,active,lastSaved,dbUrl,canDelClass:classList.length>1}),
+    tab==="set"&&e(Settings,{settings,setS,open,exportData,loadDemo,active,lastSaved,dbUrl,canDelClass:classList.length>1,setKioskMode}),
+    ), // end of ce-wrap div (non-kiosk branch)
 
-    // ===== Modals =====
+    // ===== Modals (shared between normal view and kiosk view) =====
     modal&&cur&&modal.kind==="forget"&&e(Modal,{title:`${cur.name}｜忘記攜帶`,onClose:close,foot:e(React.Fragment,null,e("button",{className:"btn gh",onClick:close},"取消"),e("button",{className:"btn dg",disabled:!fItems.length,onClick:confirmForget},"扣分 ",fItems.length?`−${fItems.length*-settings.forget}`:""))},
       e("div",{className:"note"},"每樣未攜帶的用具扣 ",-settings.forget," 分。點選今天忘記帶的："),
       e("div",{className:"chips"},settings.items.map(it=>e("button",{key:it,className:`chip ${fItems.includes(it)?"on":""}`,onClick:()=>setFItems(a=>a.includes(it)?a.filter(x=>x!==it):[...a,it])},it)))
@@ -698,7 +824,7 @@ function Leaderboard({ranked,price,rate,className}){
 }
 
 // ===== Market =====
-function Market({market,settings,students,trader,tradeId,setTradeId,buy,sell,fInvest,setFInvest,className}){
+function Market({market,settings,students,trader,tradeId,setTradeId,buy,sell,fInvest,setFInvest,className,hideSelector}){
   const e=React.createElement;
   const hist=market.history.map(p=>p.price);const first=hist.length?hist[0]:market.price;
   const chgPct=first?(market.price-first)/first*100:0;const up=chgPct>=0;
@@ -709,7 +835,7 @@ function Market({market,settings,students,trader,tradeId,setTradeId,buy,sell,fIn
         e("div",{className:`chg ${up?"up":"down"}`},up?"▲":"▼"," ",money(Math.abs(chgPct),2),"%")),
       e(Spark,{data:market.history}),
       e("div",{className:"note",style:{marginTop:8}},"教學用模擬行情，每 ",settings.eth.tickMs/1000," 秒波動。")),
-    e("div",{className:"selstu"},
+    !hideSelector&&e("div",{className:"selstu"},
       e("span",{style:{fontWeight:700,fontSize:13}},"選擇學生（",className,"）："),
       e("select",{className:"inp",value:tradeId||"",onChange:ev=>setTradeId(ev.target.value||null)},
         e("option",{value:""},"請選擇…"),students.map(s=>e("option",{key:s.id,value:s.id},s.name)))),
@@ -763,10 +889,11 @@ function LoanCenter({students,rate,repay,fRepay,setFRepay}){
 }
 
 // ===== Settings =====
-function Settings({settings,setS,open,exportData,loadDemo,active,lastSaved,dbUrl,canDelClass}){
+function Settings({settings,setS,open,exportData,loadDemo,active,lastSaved,dbUrl,canDelClass,setKioskMode}){
   const e=React.createElement;
   const numField=(label,key,val)=>e("div",{className:"field"},e("label",null,label),
     e("input",{className:"inp mono",value:val,onChange:ev=>setS({[key]:ev.target.value===""?"":Number(ev.target.value)})}));
+  const kiosk = settings.kiosk || {enabled:false,pin:"",cooldown:8};
 
   return e("div",{style:{marginTop:18,display:"flex",flexDirection:"column",gap:16}},
     e("div",{className:"panel"},
@@ -792,6 +919,19 @@ function Settings({settings,setS,open,exportData,loadDemo,active,lastSaved,dbUrl
         e("div",{className:"field"},e("label",null,"乙太幣起始價"),e("input",{className:"inp mono",value:settings.eth.start,onChange:ev=>setS({eth:{...settings.eth,start:Number(ev.target.value)}})})),
         e("div",{className:"field"},e("label",null,"波動幅度"),e("input",{className:"inp mono",value:settings.eth.vol,onChange:ev=>setS({eth:{...settings.eth,vol:Number(ev.target.value)}})})),
         e("div",{className:"field"},e("label",null,"更新間隔(ms)"),e("input",{className:"inp mono",value:settings.eth.tickMs,onChange:ev=>setS({eth:{...settings.eth,tickMs:Math.max(500,Number(ev.target.value))}})})))),
+    e("div",{className:"panel"},
+      e("div",{style:{fontWeight:700,marginBottom:6}},"🖥️ 大螢幕自助登記模式"),
+      e("div",{className:"note",style:{marginBottom:12}},"讓孩子自己在教室電視／平板上點自己的名字，登記答題、忘物、投資、借貸、請假。啟動後畫面會鎖住，只能做這些操作，要離開需要輸入下面設定的 PIN 碼。"),
+      e("div",{className:"set-grid"},
+        e("div",{className:"field"},e("label",null,"退出用 PIN 碼"),e("input",{className:"inp mono",value:kiosk.pin,onChange:ev=>setS({kiosk:{...kiosk,pin:ev.target.value}}),placeholder:"例如 1234"})),
+        e("div",{className:"field"},e("label",null,"每次操作冷卻秒數"),e("input",{className:"inp mono",value:kiosk.cooldown,onChange:ev=>setS({kiosk:{...kiosk,cooldown:Math.max(0,Number(ev.target.value)||0)}})}))),
+      e("div",{style:{marginTop:12}},
+        e("button",{
+          className:"btn in",
+          disabled:!kiosk.pin,
+          onClick:()=>setKioskMode(true)
+        },"🖥️ 啟動大螢幕模式")),
+      !kiosk.pin&&e("div",{className:"note",style:{color:"var(--red)",marginTop:6}},"請先設定 PIN 碼才能啟動（不然畫面鎖住後就沒辦法離開了）。")),
     e("div",{className:"panel"},
       e("div",{style:{fontWeight:700,marginBottom:8}},"資料安全"),
       e("div",{className:"saved",style:{marginBottom:10}},e("span",{className:"dot"}),"資料存在 Google 雲端硬碟",lastSaved?` · 上次儲存 ${clock(lastSaved)}`:""),
