@@ -3,196 +3,140 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>班級經濟計分板</title>
+<title>闖關挑戰 · 班級經濟</title>
 <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
 <style>
-:root{--paper:#F6F3EC;--panel:#FFFFFF;--ink:#1B2A32;--soft:#5D6E76;--line:#E6E0D3;
---green:#0E9F6E;--green-s:#E1F4EC;--red:#E05555;--red-s:#FBE7E7;
---indigo:#5B6EE1;--indigo-s:#EBEDFB;--gold:#DB9B2E;--gold-s:#FAF0D9;
---cjk:"PingFang TC","Microsoft JhengHei","Noto Sans TC","Heiti TC",sans-serif;
---mono:"SF Mono","JetBrains Mono","Roboto Mono",ui-monospace,monospace;}
+:root{
+  --bg:#122A29; --bg2:#0D211F; --panel:#FBF3DE; --panelDark:#EFE4C4;
+  --ink:#1C2622; --soft:#5B6E68; --line:#DDD0AA;
+  --gold:#D6A94A; --gold-dark:#9C7325; --gold-soft:#FBEACB;
+  --teal:#2F7A6E; --teal-soft:#DCEFE9;
+  --red:#C1503F; --red-soft:#F7DCD6;
+  --cjk:"PingFang TC","Microsoft JhengHei","Noto Sans TC","Heiti TC",sans-serif;
+  --mono:"SF Mono","JetBrains Mono","Roboto Mono",ui-monospace,monospace;
+}
 *{box-sizing:border-box;}
-body{margin:0;font-family:var(--cjk);color:var(--ink);background:var(--paper);-webkit-font-smoothing:antialiased;}
-.ce-wrap{max-width:1180px;margin:0 auto;padding:18px 20px 60px;}
-.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:6px 0 12px;}
-.brand{display:flex;align-items:baseline;gap:10px;}
-.brand h1{font-size:22px;font-weight:800;letter-spacing:.5px;margin:0;}
-.brand .sub{font-size:12px;color:var(--soft);}
-.spring{flex:1;}
-.syncbadge{font-size:12px;font-weight:700;padding:6px 12px;border-radius:20px;display:flex;gap:6px;align-items:center;}
-.syncbadge.ok{background:var(--green-s);color:var(--green);}
-.syncbadge.err{background:var(--red-s);color:var(--red);}
-.syncbadge.saving{background:var(--gold-s);color:var(--gold);}
-.netbox{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 14px;text-align:right;}
-.netbox .k{font-size:11px;color:var(--soft);}
-.netbox .v{font-family:var(--mono);font-size:18px;font-weight:700;}
-.classbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:2px 0 14px;}
-.classbar .lbl{font-size:12px;color:var(--soft);font-weight:700;margin-right:2px;}
-.cpill{border:1px solid var(--line);background:#fff;border-radius:22px;padding:7px 14px;font-family:var(--cjk);font-size:14px;font-weight:700;color:var(--ink);cursor:pointer;display:flex;gap:6px;align-items:center;}
-.cpill.on{background:var(--green);color:#fff;border-color:var(--green);}
-.cpill .cnt{font-family:var(--mono);font-size:11px;opacity:.75;}
-.cadd{border:1px dashed var(--line);background:transparent;border-radius:22px;padding:7px 12px;font-size:13px;font-weight:700;color:var(--soft);cursor:pointer;}
-.tabs{display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px;flex-wrap:wrap;}
-.tab{border:0;background:transparent;font-family:var(--cjk);font-size:14px;font-weight:600;color:var(--soft);padding:8px 14px;border-radius:9px;cursor:pointer;}
-.tab.on{background:var(--ink);color:#fff;}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:12px;margin-top:16px;}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:0 1px 0 rgba(0,0,0,.02);}
-.card .row1{display:flex;align-items:center;justify-content:space-between;gap:8px;}
-.card .nm{font-weight:700;font-size:15px;cursor:pointer;}
-.card .nm:hover{text-decoration:underline;}
-.pts{font-family:var(--mono);font-size:30px;font-weight:800;line-height:1;}
-.pts small{font-size:12px;font-weight:600;color:var(--soft);margin-left:4px;font-family:var(--cjk);}
-.badges{display:flex;gap:6px;flex-wrap:wrap;min-height:0;}
-.bdg{font-size:11px;font-weight:700;padding:3px 7px;border-radius:20px;font-family:var(--mono);}
-.bdg.eth{background:var(--indigo-s);color:var(--indigo);}
-.bdg.debt{background:var(--red-s);color:var(--red);}
-.qbtns{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
-.qbtn{border:1px solid var(--line);background:#fff;border-radius:9px;padding:8px 0;font-family:var(--cjk);font-size:12px;font-weight:700;cursor:pointer;color:var(--ink);}
-.qbtn:hover{border-color:var(--ink);}
-.qbtn.pos{color:var(--green);}.qbtn.pos:hover{background:var(--green-s);border-color:var(--green);}
-.qbtn.neg{color:var(--red);}.qbtn.neg:hover{background:var(--red-s);border-color:var(--red);}
-.more{display:flex;gap:6px;flex-wrap:wrap;}
-.mini{border:0;background:transparent;color:var(--soft);font-family:var(--cjk);font-size:12px;font-weight:600;cursor:pointer;padding:2px 4px;}
-.mini:hover{color:var(--ink);text-decoration:underline;}
-.btn{border:0;border-radius:10px;padding:10px 16px;font-family:var(--cjk);font-size:14px;font-weight:700;cursor:pointer;}
-.btn.pri{background:var(--ink);color:#fff;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:var(--cjk); color:var(--ink);
+  background:radial-gradient(circle at 20% 0%, #1B3D3A 0%, var(--bg) 45%, var(--bg2) 100%);
+  min-height:100vh; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:760px;margin:0 auto;padding:20px 16px 60px;min-height:100vh;}
+.center-loading{display:flex;align-items:center;justify-content:center;min-height:80vh;color:var(--gold-soft);font-weight:700;font-size:16px;text-align:center;padding:0 20px;}
+.brandhead{display:flex;flex-direction:column;align-items:center;gap:4px;margin:10px 0 22px;color:var(--gold-soft);}
+.brandhead .em{font-size:38px;}
+.brandhead h1{margin:0;font-size:22px;letter-spacing:1px;color:#fff;}
+.brandhead .sub{font-size:13px;color:#9FC7BC;}
+.panel{background:var(--panel);border-radius:18px;padding:20px;box-shadow:0 14px 34px rgba(0,0,0,.28);}
+.err-box{background:var(--red-soft);color:#7A2E22;border-radius:12px;padding:14px 16px;font-size:14px;line-height:1.7;}
+.btn{border:0;border-radius:12px;padding:12px 18px;font-family:var(--cjk);font-size:15px;font-weight:700;cursor:pointer;transition:transform .08s ease;}
+.btn:active{transform:scale(.97);}
+.btn.pri{background:var(--teal);color:#fff;}
+.btn.gold{background:var(--gold);color:#3B2A0C;}
 .btn.gh{background:#fff;color:var(--ink);border:1px solid var(--line);}
-.btn.gh:hover{border-color:var(--ink);}
 .btn.dg{background:var(--red);color:#fff;}
-.btn.gr{background:var(--green);color:#fff;}
-.btn.in{background:var(--indigo);color:#fff;}
 .btn:disabled{opacity:.4;cursor:not-allowed;}
-.empty{text-align:center;padding:60px 20px;color:var(--soft);}
-.empty h2{color:var(--ink);}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;}
-.overlay{position:fixed;inset:0;background:rgba(20,30,36,.42);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50;}
-.modal{background:#fff;border-radius:16px;width:100%;max-width:440px;max-height:88vh;overflow:auto;box-shadow:0 24px 60px rgba(0,0,0,.24);}
-.modal.lg{max-width:560px;}
-.mhead{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--line);}
-.mhead h3{margin:0;font-size:17px;}
-.x{border:0;background:transparent;font-size:22px;cursor:pointer;color:var(--soft);line-height:1;}
-.mbody{padding:18px;display:flex;flex-direction:column;gap:14px;}
-.field label{display:block;font-size:12px;font-weight:700;color:var(--soft);margin-bottom:5px;}
-.inp{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-family:var(--cjk);font-size:15px;color:var(--ink);}
-.inp:focus{outline:2px solid var(--indigo);border-color:transparent;}
-.inp.mono{font-family:var(--mono);}
-.chips{display:flex;flex-wrap:wrap;gap:8px;}
-.chip{border:1px solid var(--line);background:#fff;border-radius:20px;padding:7px 13px;font-size:13px;font-weight:600;cursor:pointer;color:var(--ink);}
-.chip.on{background:var(--red);color:#fff;border-color:var(--red);}
-.note{font-size:13px;color:var(--soft);line-height:1.6;}
-.big-res{font-family:var(--mono);font-size:26px;font-weight:800;text-align:center;}
-.mfoot{display:flex;gap:8px;justify-content:flex-end;padding:14px 18px;border-top:1px solid var(--line);}
-.toasts{position:fixed;top:16px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:8px;z-index:80;pointer-events:none;}
-.toast{background:var(--ink);color:#fff;padding:9px 16px;border-radius:22px;font-weight:700;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.22);}
-.toast.up{background:var(--green);}.toast.down{background:var(--red);}
-.board{display:flex;flex-direction:column;gap:8px;}
-.brow{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;}
-.rank{font-family:var(--mono);font-weight:800;font-size:18px;width:34px;text-align:center;color:var(--soft);}
-.rank.g1{color:var(--gold);}.rank.g2{color:#9AA6AD;}.rank.g3{color:#C08457;}
-.brow .who{font-weight:700;flex:1;}
-.brow .tag{font-size:11px;font-weight:700;color:var(--soft);background:var(--paper);border-radius:20px;padding:2px 8px;}
-.brow .comp{font-family:var(--mono);font-size:12px;color:var(--soft);}
-.brow .nw{font-family:var(--mono);font-weight:800;font-size:18px;}
-.podium{display:flex;align-items:flex-end;justify-content:center;gap:14px;margin:8px 0 22px;}
-.pod{display:flex;flex-direction:column;align-items:center;gap:6px;}
-.pod .medal{font-size:26px;}.pod .pname{font-weight:700;font-size:14px;}.pod .pval{font-family:var(--mono);font-weight:800;}
-.pod .bar{width:82px;border-radius:10px 10px 0 0;color:#fff;font-family:var(--mono);font-weight:800;}
-.ov-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:18px;}
-.ovcard{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;}
-.ovcard h3{margin:0 0 4px;font-size:16px;}
-.ovcard .big{font-family:var(--mono);font-size:26px;font-weight:800;margin:6px 0;}
-.cmp{display:flex;flex-direction:column;gap:10px;margin-top:8px;}
-.cmp .crow{display:flex;align-items:center;gap:10px;}
-.cmp .cname{width:90px;font-weight:700;font-size:13px;}
-.cmp .track{flex:1;background:var(--paper);border-radius:8px;height:22px;overflow:hidden;}
-.cmp .fill{height:100%;border-radius:8px;}
-.cmp .cval{width:72px;text-align:right;font-family:var(--mono);font-weight:700;font-size:13px;}
-.mkt-head{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;}
-.price{font-family:var(--mono);font-size:40px;font-weight:800;line-height:1;}
-.chg{font-family:var(--mono);font-weight:700;font-size:16px;padding:3px 8px;border-radius:8px;}
-.chg.up{background:var(--green-s);color:var(--green);}
-.chg.down{background:var(--red-s);color:var(--red);}
-.trade{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px;}
-@media(max-width:640px){.trade{grid-template-columns:1fr;}}
-.tcard{border:1px solid var(--line);border-radius:12px;padding:14px;background:#fff;}
-.tcard h4{margin:0 0 10px;font-size:14px;}
-.pl{font-family:var(--mono);font-weight:800;font-size:20px;}
-.pl.up{color:var(--green);}.pl.down{color:var(--red);}
-.kv{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;}
-.kv .v{font-family:var(--mono);font-weight:700;}
-.hist{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow:auto;}
-.hrow{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:6px 8px;border-bottom:1px solid var(--line);}
-.hrow .hd{font-family:var(--mono);font-weight:700;}
-.hrow .hd.p{color:var(--green);}.hrow .hd.n{color:var(--red);}
-.set-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
-@media(max-width:640px){.set-grid{grid-template-columns:1fr;}}
-.sellrow{display:flex;gap:6px;margin-top:8px;}
-.sellrow .btn{flex:1;padding:8px 0;font-size:13px;}
-.selstu{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;}
-.selstu .inp{max-width:220px;}
-.saved{font-size:12px;color:var(--soft);display:flex;align-items:center;gap:6px;}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;}
-.foot-note{font-size:12px;color:var(--soft);margin-top:26px;line-height:1.7;}
-.loadwrap{display:flex;align-items:center;justify-content:center;height:70vh;color:var(--soft);font-weight:700;}
-.kiosk{position:fixed;inset:0;background:var(--paper);z-index:100;overflow:auto;padding:32px;}
-.kiosk-top{display:flex;align-items:center;gap:18px;margin-bottom:26px;}
-.kiosk-top h1{font-size:38px;margin:0;flex:1;}
-.kgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:24px;}
-.ktile{background:#fff;border:1px solid var(--line);border-radius:24px;padding:38px 18px;text-align:center;font-weight:800;font-size:32px;cursor:pointer;}
-.ktile:active{transform:scale(.97);}
-.ktile .kpts{display:block;font-family:var(--mono);font-size:44px;margin-top:12px;color:var(--green);}
-.kself{display:flex;flex-direction:column;gap:22px;max-width:860px;margin:0 auto;}
-.kself h2{text-align:center;margin:10px 0 4px;font-size:36px;}
-.kself .note{font-size:20px;text-align:center;}
-.kbtn{border:0;border-radius:24px;padding:44px 20px;font-family:var(--cjk);font-size:38px;font-weight:800;cursor:pointer;color:#fff;background:var(--green);}
-.kbtn:disabled{opacity:.35;cursor:not-allowed;}
-.kbtn.neg{background:var(--red);}
-.kback{border:1px solid var(--line);background:#fff;border-radius:20px;padding:20px 28px;font-weight:700;cursor:pointer;font-size:24px;}
-.kbtn.leave{background:var(--indigo);}
-.kbtn.practice{background:var(--gold);}
+.stepTitle{font-size:13px;font-weight:800;color:var(--gold-dark);letter-spacing:1px;margin-bottom:10px;}
+.choiceGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;}
+.choiceBtn{background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:14px 10px;font-family:var(--cjk);font-weight:700;font-size:15px;cursor:pointer;text-align:center;}
+.choiceBtn:active{transform:scale(.96);}
+.choiceBtn .pts{display:block;font-family:var(--mono);font-size:12px;color:var(--soft);font-weight:600;margin-top:4px;}
+.topbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;color:#fff;margin-bottom:16px;}
+.topbar .who{font-weight:800;font-size:16px;}
+.topbar .cls{font-size:12px;color:#9FC7BC;}
+.topbar .spring{flex:1;}
+.ptsPill{background:var(--gold);color:#3B2A0C;font-family:var(--mono);font-weight:800;font-size:15px;padding:7px 14px;border-radius:20px;}
+.iconBtn{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:8px 14px;font-family:var(--cjk);font-size:13px;font-weight:700;cursor:pointer;}
+.trail{display:flex;flex-direction:column;gap:0;}
+.node{display:flex;gap:14px;position:relative;padding:10px 0;}
+.node .line{position:absolute;left:27px;top:56px;bottom:-10px;width:3px;background:var(--line);}
+.node:last-child .line{display:none;}
+.badgeCircle{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;flex-shrink:0;font-family:var(--mono);z-index:1;border:3px solid transparent;}
+.badgeCircle.done{background:var(--gold);color:#3B2A0C;border-color:var(--gold-dark);}
+.badgeCircle.open{background:var(--teal);color:#fff;border-color:#1E5951;}
+.badgeCircle.poor{background:#fff;color:var(--soft);border-color:var(--line);}
+.badgeCircle.locked{background:#E7E0CC;color:#B3A883;border-color:var(--line);}
+.nodeBody{flex:1;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;}
+.nodeBody .top1{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+.nodeBody .nm{font-weight:800;font-size:15px;}
+.nodeBody .cost{font-family:var(--mono);font-size:13px;color:var(--gold-dark);font-weight:800;}
+.nodeBody .desc{font-size:12.5px;color:var(--soft);line-height:1.5;}
+.nodeBody .stateTag{align-self:flex-start;font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:20px;margin-top:2px;}
+.stateTag.done{background:var(--gold-soft);color:var(--gold-dark);}
+.stateTag.open{background:var(--teal-soft);color:var(--teal);}
+.stateTag.poor{background:#EEE;color:var(--soft);}
+.stateTag.locked{background:#EEE;color:#B3A883;}
+.playBtnRow{margin-top:4px;}
+.overlay{position:fixed;inset:0;background:rgba(10,20,18,.55);display:flex;align-items:center;justify-content:center;padding:20px;z-index:60;}
+.modalBox{background:#fff;border-radius:18px;max-width:400px;width:100%;padding:22px;text-align:center;}
+.modalBox h3{margin:0 0 8px;font-size:18px;}
+.modalBox p{font-size:14px;color:var(--soft);line-height:1.7;margin:0 0 18px;}
+.modalBox .btnRow{display:flex;gap:10px;justify-content:center;}
+.playHead{display:flex;align-items:center;gap:10px;color:#fff;margin-bottom:14px;}
+.playHead .lv{font-weight:800;font-size:16px;}
+.playHead .spring{flex:1;}
+.puzzleWrap{background:var(--panel);border-radius:18px;padding:20px;min-height:260px;}
+.giveUpRow{display:flex;justify-content:center;margin-top:18px;}
+.mini-note{font-size:12px;color:var(--soft);text-align:center;margin-top:8px;}
+.resultWrap{text-align:center;padding:40px 20px;}
+.resultWrap .emoji{font-size:56px;margin-bottom:10px;}
+.resultWrap h2{margin:0 0 8px;color:#fff;font-size:24px;}
+.resultWrap p{color:#B9D6CD;font-size:14px;line-height:1.7;margin:0 0 22px;}
+.badgeShow{display:inline-flex;flex-direction:column;align-items:center;gap:6px;background:var(--gold-soft);border:2px solid var(--gold);border-radius:16px;padding:16px 26px;margin-bottom:22px;}
+.badgeShow .em{font-size:34px;}
+.badgeShow .nm{font-weight:800;color:var(--gold-dark);}
+.badgeGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;}
+.badgeCard{background:#fff;border-radius:14px;padding:16px 10px;text-align:center;border:2px solid var(--line);}
+.badgeCard.got{border-color:var(--gold);background:var(--gold-soft);}
+.badgeCard .em{font-size:30px;display:block;margin-bottom:6px;}
+.badgeCard .nm{font-weight:700;font-size:13px;}
+.badgeCard .st{font-size:11px;color:var(--soft);margin-top:4px;}
 
-/* Kiosk action grid (自助登記) */
-.kActionGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;max-width:900px;margin:0 auto;}
-.kActBtn{border:2px solid var(--line);border-radius:16px;padding:22px 10px;font-family:var(--cjk);font-size:17px;font-weight:800;cursor:pointer;background:#fff;color:var(--ink);min-height:88px;}
-.kActBtn:active{transform:scale(.96);}
-.kActBtn.pos{background:var(--green-s);border-color:var(--green);color:var(--green);}
-.kActBtn.neg{background:var(--red-s);border-color:var(--red);color:var(--red);}
-.kActBtn:disabled{opacity:.4;cursor:not-allowed;}
-.kBigPts{font-family:var(--mono);font-size:52px;font-weight:800;text-align:center;}
-.kCooldown{text-align:center;color:var(--red);font-weight:700;margin-bottom:10px;}
-
-/* Loan partial */
-.loan-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px;}
-.loan-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line);}
-.loan-row .inp{max-width:120px;padding:6px 8px;font-size:13px;}
+/* ---- shared puzzle bits ---- */
+.pTitle{font-weight:800;font-size:16px;margin-bottom:4px;}
+.pDesc{font-size:13px;color:var(--soft);margin-bottom:14px;line-height:1.6;}
+.grid2{display:grid;gap:10px;}
+.cardTile{aspect-ratio:1;border-radius:12px;border:2px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;cursor:pointer;}
+.cardTile.done{background:var(--teal-soft);border-color:var(--teal);opacity:.6;cursor:default;}
+.optBtn{display:block;width:100%;text-align:left;background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;font-family:var(--cjk);font-size:14.5px;font-weight:600;cursor:pointer;margin-bottom:9px;}
+.optBtn.correct{background:var(--teal-soft);border-color:var(--teal);}
+.optBtn.wrong{background:var(--red-soft);border-color:var(--red);}
+.numTile{width:56px;height:56px;border-radius:12px;border:2px solid var(--line);background:#fff;font-family:var(--mono);font-size:20px;font-weight:800;cursor:pointer;}
+.numTile.sel{background:var(--teal);color:#fff;border-color:#1E5951;}
+.opBtn{width:48px;height:48px;border-radius:10px;border:2px solid var(--line);background:#fff;font-size:18px;font-weight:800;cursor:pointer;}
+.mazeGrid{display:inline-grid;gap:2px;background:var(--ink);padding:4px;border-radius:10px;margin:0 auto;}
+.mazeCell{width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.arrowPad{display:grid;grid-template-columns:repeat(3,52px);grid-template-rows:repeat(2,52px);gap:6px;justify-content:center;margin-top:16px;}
+.arrowBtn{border:0;border-radius:10px;background:var(--teal);color:#fff;font-size:20px;font-weight:800;cursor:pointer;}
+.sudokuGrid{display:grid;grid-template-columns:repeat(4,54px);grid-template-rows:repeat(4,54px);gap:3px;background:var(--ink);padding:4px;border-radius:10px;margin:0 auto 14px;}
+.sudokuCell{background:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:20px;font-weight:800;cursor:pointer;}
+.sudokuCell.fixed{background:var(--panelDark);color:var(--soft);cursor:default;}
+.sudokuCell.sel{outline:3px solid var(--teal);outline-offset:-3px;}
+.padRow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+.stageDots{display:flex;gap:6px;justify-content:center;margin-bottom:14px;}
+.stageDots span{width:10px;height:10px;border-radius:50%;background:var(--line);}
+.stageDots span.on{background:var(--teal);}
+.stageDots span.done{background:var(--gold);}
+.centerCol{display:flex;flex-direction:column;align-items:center;}
 </style>
 </head>
 <body>
 <div id="root"></div>
-<script>
+<script type="text/babel">
+const {useState, useEffect, useRef, useMemo} = React;
+const e = React.createElement;
+
 // ============================================================
-// ⚙️ 設定：貼上你的 Apps Script 部署網址
+// ⚙️ 設定：跟班級經濟計分板使用同一個 Apps Script 部署網址
 // ============================================================
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw2LVxfHmnlggbhP5qH59mj_rOfdPkeit75peHD-GIwMBro6Ys2sNMPlBy6yaJTvKo/exec';
-// 例如: 'https://script.google.com/macros/s/AKfycbzhuj80ozTlDJMka5TEvNCjdvj5fMFepQnckJ8c-wveTD1Wg9-yl83BfVw5w-PXxgC9/exec'
-// 留空時會只使用 localStorage（離線模式）
 
-const {useState,useEffect,useRef,useMemo} = React;
-const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const nowMs = () => Date.now();
-const r1 = x => Math.round(x*10)/10;
-const np = x => {const v=r1(x);return Number.isInteger(v)?String(v):v.toFixed(1);};
-const money = (x,d=2) => Number(x).toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
-const clock = t => new Date(t).toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
-function gaussian(){let u=0,v=0;while(!u) u=Math.random();while(!v) v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
-
-// ===== API Bridge (fetch to Apps Script) =====
 async function gs(action, payload) {
-  if (!SCRIPT_URL) throw new Error('SCRIPT_URL 尚未設定');
   const body = {action};
-  if (action === 'saveData') body.data = payload;
-  else if (action === 'submitLeave') body.payload = payload;
+  if (payload !== undefined) body.payload = payload;
   const resp = await fetch(SCRIPT_URL, {
     method: 'POST',
     headers: {'Content-Type': 'text/plain'},
@@ -200,750 +144,801 @@ async function gs(action, payload) {
     redirect: 'follow'
   });
   const text = await resp.text();
-  try {
-    const json = JSON.parse(text);
-    if (!json.ok) throw new Error(json.error || 'API error');
-    return json.result;
-  } catch(e) {
-    // Apps Script sometimes returns the raw result
-    return text;
-  }
+  let json;
+  try { json = JSON.parse(text); } catch (err) { throw new Error('伺服器回應格式錯誤'); }
+  if (!json.ok) throw new Error(json.error || 'API 發生錯誤');
+  return json.result;
 }
 
-const HAS_GS = !!SCRIPT_URL;
-const LS_CACHE = "ce.cache.v1", LS_MKT = "ce.market.v1";
-const lsGet = k => {try{return localStorage.getItem(k);}catch(e){return null;}};
-const lsSet = (k,v) => {try{localStorage.setItem(k,v);}catch(e){}};
+// ===== utils =====
+function shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function randInt(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
+function pick(arr){return arr[randInt(0,arr.length-1)];}
 
-const DEFAULT_SETTINGS = {
-  answer:1, workbook:3, help:2, forget:-2,
-  items:["紅筆","課本","習作","練習簿","聯絡簿"],
-  bands:[{min:90,pts:5},{min:80,pts:3},{min:70,pts:1}],
-  tutor:{base:3,threshold:10,perPoint:0.5},
-  loanRate:0.01,
-  eth:{start:3500,vol:0.014,drift:0.0004,tickMs:3000},
-  kiosk:{enabled:false,pin:"",cooldown:8}
-};
-const newStudent = name => ({id:uid(),name,points:0,eth:0,costBasis:0,loans:[],examTarget:80,history:[]});
-const newClass = (name,students=[]) => ({id:uid(),name,students});
-function defaultBlob(){
-  const jia=newClass("五年甲班"),yi=newClass("五年乙班");
-  return {classes:{[jia.id]:jia,[yi.id]:yi},activeId:jia.id,settings:DEFAULT_SETTINGS};
-}
-function tutorBonus(imp,t){if(imp<=t.threshold) return 0;return r1(t.base+(imp-t.threshold)*t.perPoint);}
-function examBonus(actual,target,bands){
-  if(actual<target) return {ok:false,pts:0};
-  for(const b of bands) if(actual>=b.min) return {ok:true,pts:b.pts};
-  return {ok:true,pts:0};
-}
-function loanOwed(l,rate){const days=(nowMs()-l.start)/86400000;return l.principal*Math.pow(1+rate,days);}
-function totalOwed(s,rate){return (s.loans||[]).reduce((a,l)=>a+loanOwed(l,rate),0);}
-function netWorth(s,price,rate){return s.points+s.eth*price-totalOwed(s,rate);}
-function classNet(c,price,rate){return c.students.reduce((a,s)=>a+netWorth(s,price,rate),0);}
+// ===== level config =====
+const LEVELS = [
+  {id:1, name:'記憶新手村', cost:3,  type:'memory',    badge:'🟢', badgeName:'新手勇者',  desc:'翻牌配對，考驗觀察與記憶力'},
+  {id:2, name:'找碴任務',   cost:5,  type:'spotdiff',  badge:'🔍', badgeName:'火眼金睛',  desc:'比對兩張圖，找出不一樣的地方'},
+  {id:3, name:'推箱迷城',   cost:8,  type:'sokoban',   badge:'📦', badgeName:'搬運高手',  desc:'把箱子推到指定位置'},
+  {id:4, name:'規律密碼',   cost:12, type:'sequence',  badge:'🔢', badgeName:'邏輯之眼',  desc:'找出數列或圖形的規律'},
+  {id:5, name:'24點挑戰',   cost:18, type:'twentyfour',badge:'➗', badgeName:'心算達人',  desc:'用加減乘除湊出 24'},
+  {id:6, name:'成語謎陣',   cost:25, type:'idiom',     badge:'📖', badgeName:'詞彙大師',  desc:'看提示，選出正確的成語'},
+  {id:7, name:'迷宮試煉',   cost:35, type:'maze',      badge:'🧭', badgeName:'探路先鋒',  desc:'在有限步數內走出迷宮'},
+  {id:8, name:'數獨要塞',   cost:48, type:'sudoku',    badge:'🧩', badgeName:'數字工程師', desc:'完成 4x4 小數獨'},
+  {id:9, name:'推理密室',   cost:65, type:'logic',     badge:'🕵️', badgeName:'名偵探',    desc:'根據線索推理出正確答案'},
+  {id:10,name:'王者試煉',   cost:90, type:'boss',      badge:'👑', badgeName:'班級傳說',  desc:'三階段連續挑戰，全部過關才算破關'}
+];
 
-const canon = b => {
-  const aid = b.activeId && b.classes[b.activeId] ? b.activeId : Object.keys(b.classes)[0];
-  return JSON.stringify({classes:b.classes,activeId:aid,settings:{...DEFAULT_SETTINGS,...(b.settings||{})}});
-};
+// ============================================================
+// 拼圖元件們
+// ============================================================
 
-// ===== Modal Component =====
-function Modal({title,onClose,foot,children,lg}){
-  return React.createElement("div",{className:"overlay",onClick:onClose},
-    React.createElement("div",{className:`modal ${lg?"lg":""}`,onClick:e=>e.stopPropagation()},
-      React.createElement("div",{className:"mhead"},
-        React.createElement("h3",null,title),
-        React.createElement("button",{className:"x",onClick:onClose},"×")),
-      React.createElement("div",{className:"mbody"},children),
-      foot && React.createElement("div",{className:"mfoot"},foot)));
+function useGuardedResult(onWin, onLose){
+  const done = useRef(false);
+  const win = () => { if(done.current) return; done.current = true; onWin(); };
+  const lose = () => { if(done.current) return; done.current = true; onLose(); };
+  return [win, lose];
 }
 
-// ===== Kiosk View（給孩子在大螢幕上自助登記用）=====
-function KioskView({students, settings, market, price, rate, className, applyDelta, open, buy, sell, repay, fInvest, setFInvest, fRepay, setFRepay, kioskStudentId, setKioskStudentId, setKioskMode, pushToast}){
-  const e = React.createElement;
-  const [screen, setScreen] = useState('actions'); // 'actions' | 'market' | 'loan'
-  const [exitPrompt, setExitPrompt] = useState(false);
-  const [pinInput, setPinInput] = useState('');
-  const [cooldownUntil, setCooldownUntil] = useState(0);
-  const [, forceTick] = useState(0);
+function GiveUp({onLose}){
+  return e("div",{className:"giveUpRow"},
+    e("button",{className:"btn gh",onClick:onLose},"放棄挑戰"));
+}
 
-  useEffect(() => {
-    if (!cooldownUntil) return;
-    const iv = setInterval(() => forceTick(x => x + 1), 300);
-    return () => clearInterval(iv);
-  }, [cooldownUntil]);
+// ---- 1. 記憶配對 ----
+const EMOJI_POOL = ['🐶','🐱','🐰','🐻','🦊','🐼','🐸','🐷','🦁','🐵','🐔','🦄','🐙','🦋','🐝','🐢'];
+function MemoryGame({onWin,onLose,pairCount=6,maxMoves=16}){
+  const [win,lose] = useGuardedResult(onWin,onLose);
+  const [cards,setCards] = useState(()=>{
+    const chosen = shuffle(EMOJI_POOL).slice(0,pairCount);
+    return shuffle([...chosen,...chosen]).map((emoji,i)=>({id:i,emoji,flipped:false,matched:false}));
+  });
+  const [flippedIdx,setFlippedIdx] = useState([]);
+  const [moves,setMoves] = useState(0);
+  const busyRef = useRef(false);
 
-  const student = students.find(s => s.id === kioskStudentId);
-  const cooldownSec = (settings.kiosk && settings.kiosk.cooldown) || 8;
-  const cooldownLeft = Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000));
-  const onCooldown = cooldownLeft > 0;
-
-  function quickAction(label, delta) {
-    if (onCooldown) return;
-    applyDelta(kioskStudentId, label, delta);
-    setCooldownUntil(Date.now() + cooldownSec * 1000);
-  }
-
-  function attemptExit() {
-    if (pinInput === ((settings.kiosk && settings.kiosk.pin) || '')) {
-      setExitPrompt(false); setPinInput(''); setKioskMode(false); setKioskStudentId(null);
+  function flip(i){
+    if(busyRef.current || cards[i].flipped || cards[i].matched) return;
+    const next = cards.map((c,idx)=> idx===i ? {...c,flipped:true} : c);
+    setCards(next);
+    const nf = [...flippedIdx, i];
+    if(nf.length < 2){ setFlippedIdx(nf); return; }
+    busyRef.current = true;
+    const newMoves = moves+1;
+    setMoves(newMoves);
+    const [a,b] = nf;
+    if(next[a].emoji === next[b].emoji){
+      setTimeout(()=>{
+        setCards(cur=>{
+          const upd = cur.map((c,idx)=> (idx===a||idx===b) ? {...c,matched:true} : c);
+          if(upd.every(c=>c.matched)) setTimeout(win,350);
+          return upd;
+        });
+        setFlippedIdx([]); busyRef.current=false;
+      },500);
     } else {
-      pushToast('PIN 錯誤', 'down');
-      setPinInput('');
+      setTimeout(()=>{
+        setCards(cur=>cur.map((c,idx)=> (idx===a||idx===b) ? {...c,flipped:false} : c));
+        setFlippedIdx([]); busyRef.current=false;
+        if(newMoves >= maxMoves) setTimeout(lose,300);
+      },700);
     }
   }
 
-  const exitModal = exitPrompt && e(Modal, {
-    title: '輸入 PIN 結束大螢幕模式',
-    onClose: () => { setExitPrompt(false); setPinInput(''); },
-    foot: e(React.Fragment, null,
-      e("button", { className: "btn gh", onClick: () => { setExitPrompt(false); setPinInput(''); } }, "取消"),
-      e("button", { className: "btn pri", onClick: attemptExit }, "確認"))
+  const cols = pairCount<=4 ? 4 : 4;
+  return e("div",null,
+    e("div",{className:"pTitle"},"翻牌配對"),
+    e("div",{className:"pDesc"},"翻兩張牌，找出所有配對。可翻牌次數：",maxMoves," 次（已用 ",moves," 次）"),
+    e("div",{className:"grid2",style:{gridTemplateColumns:`repeat(${cols},1fr)`,maxWidth:340,margin:"0 auto"}},
+      cards.map((c,i)=> e("div",{
+        key:c.id,
+        className:`cardTile ${c.matched?"done":""}`,
+        onClick:()=>flip(i)
+      }, (c.flipped||c.matched) ? c.emoji : "❔"))),
+    e(GiveUp,{onLose:lose}));
+}
+
+// ---- 2. 找碴 ----
+const FRUIT_ICONS = ['🍎','🍌','🍇','🍉','🍒','🍋','🍓','🥝','🍑','🍍'];
+function SpotDiffGame({onWin,onLose}){
+  const [win,lose] = useGuardedResult(onWin,onLose);
+  const [state] = useState(()=>{
+    const original = Array.from({length:16},()=>pick(FRUIT_ICONS));
+    const diffIdx = shuffle(Array.from({length:16},(_,i)=>i)).slice(0,3);
+    const modified = original.map((ic,i)=> diffIdx.includes(i) ? pick(FRUIT_ICONS.filter(x=>x!==ic)) : ic);
+    return {original, diffIdx, modified};
+  });
+  const [found,setFound] = useState([]);
+  const [wrong,setWrong] = useState(0);
+  const [flashWrong,setFlashWrong] = useState(-1);
+
+  function clickCell(i){
+    if(found.includes(i)) return;
+    if(state.diffIdx.includes(i)){
+      const nf=[...found,i]; setFound(nf);
+      if(nf.length===3) setTimeout(win,300);
+    } else {
+      setFlashWrong(i);
+      setTimeout(()=>setFlashWrong(-1),350);
+      const w=wrong+1; setWrong(w);
+      if(w>=5) setTimeout(lose,300);
+    }
+  }
+  function cellStyle(i,isRight){
+    if(isRight && found.includes(i)) return {background:"var(--teal-soft)",borderColor:"var(--teal)"};
+    if(isRight && flashWrong===i) return {background:"var(--red-soft)",borderColor:"var(--red)"};
+    return {};
+  }
+  return e("div",null,
+    e("div",{className:"pTitle"},"找碴任務"),
+    e("div",{className:"pDesc"},"右邊圖有 3 處和左邊不一樣，點右邊圖找出來。錯 5 次就失敗（已錯 ",wrong,"／5）"),
+    e("div",{style:{display:"flex",gap:14,justifyContent:"center",flexWrap:"wrap"}},
+      e("div",null,
+        e("div",{style:{textAlign:"center",fontSize:12,color:"var(--soft)",marginBottom:4}},"原圖"),
+        e("div",{className:"grid2",style:{gridTemplateColumns:"repeat(4,1fr)",width:172}},
+          state.original.map((ic,i)=> e("div",{key:i,className:"cardTile",style:{cursor:"default",fontSize:18}},ic)))),
+      e("div",null,
+        e("div",{style:{textAlign:"center",fontSize:12,color:"var(--soft)",marginBottom:4}},"找不同"),
+        e("div",{className:"grid2",style:{gridTemplateColumns:"repeat(4,1fr)",width:172}},
+          state.modified.map((ic,i)=> e("div",{key:i,className:"cardTile",style:{fontSize:18,...cellStyle(i,true)},onClick:()=>clickCell(i)},ic))))),
+    e(GiveUp,{onLose:lose}));
+}
+
+// ---- 3. 推箱子 ----
+// 三個版面都用 BFS 解謎程式驗證過，需要 10~12 步的最短解（比之前 7~10 步的版本更需要轉彎繞路），
+// 不是隨便畫的地圖。
+const SOKOBAN_LAYOUTS = [
+[
+"#######",
+"#....T#",
+"#.###.#",
+"#.....#",
+"#.###.#",
+"#.B...#",
+"#..P..#",
+"#######"
+],
+[
+"########",
+"#.....T#",
+"#.####.#",
+"#......#",
+"#.####.#",
+"#..B...#",
+"#..P...#",
+"########"
+],
+[
+"#########",
+"#T......#",
+"#.#####.#",
+"#.......#",
+"#.#####.#",
+"#..B....#",
+"#..P....#",
+"#########"
+]
+];
+function parseLayout(layout){
+  const grid = layout.map(r=>r.split(""));
+  let player=null, box=null, target=null;
+  grid.forEach((row,r)=>row.forEach((ch,c)=>{
+    if(ch==='P'){player={r,c};}
+    if(ch==='B'){box={r,c};}
+    if(ch==='T'){target={r,c};}
+  }));
+  return {grid, player, box, target};
+}
+function SokobanGame({onWin,onLose,maxMoves=22}){
+  const [win,lose] = useGuardedResult(onWin,onLose);
+  const [init] = useState(()=>parseLayout(pick(SOKOBAN_LAYOUTS)));
+  const [player,setPlayer] = useState(init.player);
+  const [box,setBox] = useState(init.box);
+  const [moves,setMoves] = useState(0);
+  const isWall = (r,c) => init.grid[r][c] === '#';
+
+  function move(dr,dc){
+    const nr=player.r+dr, nc=player.c+dc;
+    if(isWall(nr,nc)) return;
+    let newBox = box;
+    if(box.r===nr && box.c===nc){
+      const br=box.r+dr, bc=box.c+dc;
+      if(isWall(br,bc)) return;
+      newBox = {r:br,c:bc};
+    }
+    setPlayer({r:nr,c:nc});
+    setBox(newBox);
+    const nm = moves+1; setMoves(nm);
+    if(newBox.r===init.target.r && newBox.c===init.target.c){
+      setTimeout(win,300);
+    } else if(nm>=maxMoves){
+      setTimeout(lose,300);
+    }
+  }
+
+  return e("div",null,
+    e("div",{className:"pTitle"},"推箱迷城"),
+    e("div",{className:"pDesc"},"用方向鍵把箱子 📦 推到目標 🎯 上。步數上限 ",maxMoves," （已走 ",moves," 步）"),
+    e("div",{className:"centerCol"},
+      e("div",{className:"mazeGrid",style:{gridTemplateColumns:`repeat(${init.grid[0].length},34px)`}},
+        init.grid.map((row,r)=>row.map((ch,c)=>{
+          let content = "";
+          let bg = "#EFE4C4";
+          if(ch==='#'){ bg="#1C2622"; }
+          else if(init.target.r===r && init.target.c===c && !(box.r===r&&box.c===c)) { content="🎯"; }
+          if(box.r===r && box.c===c){ content = (box.r===init.target.r&&box.c===init.target.c) ? "✅" : "📦"; }
+          if(player.r===r && player.c===c){ content = "🧑"; }
+          return e("div",{key:`${r}-${c}`,className:"mazeCell",style:{background:bg}},content);
+        }))),
+      e("div",{className:"arrowPad"},
+        e("div",null),e("button",{className:"arrowBtn",onClick:()=>move(-1,0)},"↑"),e("div",null),
+        e("button",{className:"arrowBtn",onClick:()=>move(0,-1)},"←"),
+        e("button",{className:"arrowBtn",onClick:()=>move(1,0)},"↓"),
+        e("button",{className:"arrowBtn",onClick:()=>move(0,1)},"→"))),
+    e(GiveUp,{onLose:lose}));
+}
+
+// ---- 4. 規律密碼 ----
+function genNumberRound(){
+  const kind = pick(['arith','geom']);
+  if(kind==='arith'){
+    const start = randInt(1,10), diff = randInt(2,6)*pick([1,1,-1]);
+    const seq = [0,1,2,3].map(i=>start+diff*i);
+    const answer = start+diff*4;
+    const options = shuffle([answer, answer+diff*pick([1,-1])||answer+1, answer+randInt(1,3), answer-randInt(1,3)]);
+    return {prompt:`${seq.join('、')}、？`, options:[...new Set(options)].slice(0,4).length===4?[...new Set(options)]:shuffle([answer,answer+1,answer+2,answer-1]), answer};
+  } else {
+    const start = randInt(1,3), ratio=2;
+    const seq=[0,1,2,3].map(i=>start*Math.pow(ratio,i));
+    const answer = start*Math.pow(ratio,4);
+    const options = shuffle([answer, answer+ratio, Math.round(answer/ratio*1.5), answer-2]);
+    return {prompt:`${seq.join('、')}、？`, options:[...new Set(options)].slice(0,4).length===4?[...new Set(options)]:shuffle([answer,answer+2,answer-2,answer+4]), answer};
+  }
+}
+function genShapeRound(){
+  const pools = [['🔴','🔵'],['🔺','🔺','🔵'],['⭐','⭐','🌙']];
+  const cycle = pick(pools);
+  const seq = Array.from({length:5},(_,i)=>cycle[i%cycle.length]);
+  const answer = cycle[5%cycle.length];
+  const allEmoji = ['🔴','🔵','🔺','⭐','🌙','🟢'];
+  const options = shuffle([...new Set([answer, ...shuffle(allEmoji.filter(x=>x!==answer)).slice(0,3)])]);
+  return {prompt:seq.join(' '), options, answer, isEmoji:true};
+}
+function SequenceGame({onWin,onLose,rounds=3,needCorrect=2}){
+  const [win,lose] = useGuardedResult(onWin,onLose);
+  const [data] = useState(()=>Array.from({length:rounds},()=> pick([genNumberRound,genShapeRound])()));
+  const [idx,setIdx] = useState(0);
+  const [correctCount,setCorrectCount] = useState(0);
+  const [picked,setPicked] = useState(null);
+  const cur = data[idx];
+
+  function choose(opt){
+    if(picked!==null) return;
+    setPicked(opt);
+    const ok = opt===cur.answer;
+    const newCount = correctCount + (ok?1:0);
+    setCorrectCount(newCount);
+    setTimeout(()=>{
+      if(idx+1 >= rounds){
+        if(newCount >= needCorrect) win(); else lose();
+      } else {
+        setIdx(idx+1); setPicked(null);
+      }
+    },700);
+  }
+
+  return e("div",null,
+    e("div",{className:"pTitle"},"規律密碼"),
+    e("div",{className:"pDesc"},"第 ",idx+1," / ",rounds," 題，需答對 ",needCorrect," 題以上才能過關"),
+    e("div",{style:{fontSize:cur.isEmoji?26:22,fontWeight:800,textAlign:"center",margin:"18px 0",fontFamily:"var(--mono)"}},cur.prompt),
+    e("div",{className:"choiceGrid",style:{maxWidth:340,margin:"0 auto"}},
+      cur.options.map((opt,i)=> e("button",{
+        key:i,
+        className:"choiceBtn",
+        style: picked!==null ? {
+          background: opt===cur.answer ? "var(--teal-soft)" : (opt===picked ? "var(--red-soft)" : "#fff"),
+          borderColor: opt===cur.answer ? "var(--teal)" : (opt===picked ? "var(--red)" : "var(--line)")
+        } : {},
+        onClick:()=>choose(opt)
+      }, String(opt)))),
+    e(GiveUp,{onLose:lose}));
+}
+
+// ---- 5. 24點 ----
+function canMake24(nums){
+  if(nums.length===1) return Math.abs(nums[0]-24)<1e-6;
+  for(let i=0;i<nums.length;i++){
+    for(let j=0;j<nums.length;j++){
+      if(i===j) continue;
+      const rest = nums.filter((_,idx)=>idx!==i&&idx!==j);
+      const a=nums[i], b=nums[j];
+      const cands = [a+b, a-b, a*b];
+      if(Math.abs(b)>1e-9) cands.push(a/b);
+      for(const c of cands){ if(canMake24([...rest,c])) return true; }
+    }
+  }
+  return false;
+}
+function gen24(){
+  for(let tries=0; tries<300; tries++){
+    const nums = Array.from({length:4},()=>randInt(1,9));
+    if(canMake24(nums)) return nums;
+  }
+  return [1,2,3,4].map(()=>randInt(1,9));
+}
+function TwentyFourGame({onWin,onLose}){
+  const [win,lose] = useGuardedResult(onWin,onLose);
+  const [original] = useState(()=>gen24());
+  const [tiles,setTiles] = useState(()=>original.map((v,i)=>({id:i+'-0',val:v})));
+  const [selIdx,setSelIdx] = useState(null);
+  const [op,setOp] = useState(null);
+  const [tries,setTries] = useState(0);
+  const MAX_TRIES = 5;
+
+  function resetTiles(){ setTiles(original.map((v,i)=>({id:i+'-'+Math.random(),val:v}))); setSelIdx(null); setOp(null); }
+
+  function pickTile(i){
+    if(selIdx===null){ setSelIdx(i); return; }
+    if(selIdx===i){ setSelIdx(null); return; }
+    if(!op){ return; }
+    const a = tiles[selIdx].val, b = tiles[i].val;
+    let result;
+    if(op==='+') result = a+b;
+    else if(op==='-') result = a-b;
+    else if(op==='×') result = a*b;
+    else if(op==='÷'){ if(b===0){ return; } result = a/b; }
+    const rest = tiles.filter((_,idx)=>idx!==selIdx && idx!==i);
+    const nextTiles = [...rest, {id:Math.random()+'', val: Math.round(result*1000)/1000}];
+    setTiles(nextTiles); setSelIdx(null); setOp(null);
+    if(nextTiles.length===1){
+      if(Math.abs(nextTiles[0].val-24)<1e-6){ setTimeout(win,300); }
+      else {
+        const nt = tries+1; setTries(nt);
+        if(nt>=MAX_TRIES){ setTimeout(lose,400); }
+        else { setTimeout(resetTiles,700); }
+      }
+    }
+  }
+
+  return e("div",null,
+    e("div",{className:"pTitle"},"24 點挑戰"),
+    e("div",{className:"pDesc"},"依序點兩個數字、選一個運算，把 4 個數字合成 24。剩餘嘗試次數：",MAX_TRIES-tries),
+    e("div",{style:{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap",margin:"18px 0"}},
+      tiles.map((t,i)=> e("button",{key:t.id,className:`numTile ${selIdx===i?"sel":""}`,onClick:()=>pickTile(i)}, Number.isInteger(t.val)? t.val : t.val.toFixed(2)))),
+    e("div",{style:{display:"flex",gap:8,justifyContent:"center"}},
+      ['+','-','×','÷'].map(o=> e("button",{key:o,className:"opBtn",style:op===o?{background:"var(--teal)",color:"#fff",borderColor:"#1E5951"}:{},onClick:()=>setOp(o)},o))),
+    e("div",{className:"mini-note"},"先選數字 → 再選運算符號 → 再選第二個數字"),
+    e("div",{style:{display:"flex",justifyContent:"center",marginTop:10}},
+      e("button",{className:"btn gh",onClick:resetTiles},"重新排列")),
+    e(GiveUp,{onLose:lose}));
+}
+
+// ---- 6. 成語謎陣 ----
+const IDIOM_BANK = [
+  {clue:'形容做事非常小心謹慎，像走在薄冰上', answer:'如履薄冰', options:['如履薄冰','畫蛇添足','守株待兔','狐假虎威']},
+  {clue:'比喻多此一舉，做了不必要的事', answer:'畫蛇添足', options:['畫蛇添足','井底之蛙','亡羊補牢','對牛彈琴']},
+  {clue:'比喻見識淺薄，看不到廣大的世界', answer:'井底之蛙', options:['井底之蛙','如魚得水','畫龍點睛','東施效顰']},
+  {clue:'比喻事情發生後想辦法補救，還來得及', answer:'亡羊補牢', options:['亡羊補牢','杯弓蛇影','掩耳盜鈴','塞翁失馬']},
+  {clue:'形容抓住重點，使整體更生動', answer:'畫龍點睛', options:['畫龍點睛','班門弄斧','愚公移山','南轅北轍']},
+  {clue:'比喻仗著別人的勢力來欺負別人', answer:'狐假虎威', options:['狐假虎威','鶴立雞群','杯水車薪','四面楚歌']},
+  {clue:'比喻不聽別人的話，白費力氣說給不懂的人聽', answer:'對牛彈琴', options:['對牛彈琴','畫蛇添足','守株待兔','刻舟求劍']},
+  {clue:'比喻死守經驗，不知道變通', answer:'守株待兔', options:['守株待兔','刻舟求劍','亡羊補牢','井底之蛙']},
+  {clue:'比喻自己嚇自己，疑神疑鬼', answer:'杯弓蛇影', options:['杯弓蛇影','掩耳盜鈴','狐假虎威','畫龍點睛']},
+  {clue:'比喻自欺欺人，掩蓋不了事實', answer:'掩耳盜鈴', options:['掩耳盜鈴','塞翁失馬','亡羊補牢','班門弄斧']},
+  {clue:'比喻在行家面前賣弄本領，不自量力', answer:'班門弄斧', options:['班門弄斧','南轅北轍','愚公移山','四面楚歌']},
+  {clue:'比喻做事的方向跟目標完全相反', answer:'南轅北轍', options:['南轅北轍','愚公移山','四面楚歌','鶴立雞群']}
+];
+function IdiomGame({onWin,onLose,rounds=3,needCorrect=2}){
+  const [win,lose] = useGuardedResult(onWin,onLose);
+  const [data] = useState(()=>shuffle(IDIOM_BANK).slice(0,rounds).map(q=>({...q, options:shuffle(q.options)})));
+  const [idx,setIdx] = useState(0);
+  const [correctCount,setCorrectCount] = useState(0);
+  const [picked,setPicked] = useState(null);
+  const cur = data[idx];
+
+  function choose(opt){
+    if(picked!==null) return;
+    setPicked(opt);
+    const ok = opt===cur.answer;
+    const newCount = correctCount + (ok?1:0);
+    setCorrectCount(newCount);
+    setTimeout(()=>{
+      if(idx+1>=rounds){ if(newCount>=needCorrect) win(); else lose(); }
+      else { setIdx(idx+1); setPicked(null); }
+    },700);
+  }
+  return e("div",null,
+    e("div",{className:"pTitle"},"成語謎陣"),
+    e("div",{className:"pDesc"},"第 ",idx+1," / ",rounds," 題，需答對 ",needCorrect," 題以上"),
+    e("div",{style:{fontSize:15,fontWeight:700,textAlign:"center",margin:"16px 0",lineHeight:1.7}},cur.clue),
+    cur.options.map((opt,i)=> e("button",{
+      key:i,
+      className:"optBtn",
+      style: picked!==null ? {
+        borderColor: opt===cur.answer ? "var(--teal)" : (opt===picked?"var(--red)":"var(--line)"),
+        background: opt===cur.answer ? "var(--teal-soft)" : (opt===picked?"var(--red-soft)":"#fff")
+      } : {},
+      onClick:()=>choose(opt)
+    }, opt)),
+    e(GiveUp,{onLose:lose}));
+}
+
+// ---- 7. 迷宮 ----
+const MAZES = [
+["#######","#S....#","#####.#","#.....#","#.#####","#....G#","#######"],
+["#######","#S.##.#","#.##..#","#....##","##.#..#","#....G#","#######"]
+];
+function findChar(layout,ch){
+  for(let r=0;r<layout.length;r++){ const c=layout[r].indexOf(ch); if(c!==-1) return {r,c}; }
+  return null;
+}
+function MazeGame({onWin,onLose,layout,moveLimit=26}){
+  const [win,lose] = useGuardedResult(onWin,onLose);
+  const [init] = useState(()=>{
+    const lay = layout || pick(MAZES);
+    return {grid: lay.map(r=>r.split("")), start: findChar(lay,'S'), goal: findChar(lay,'G')};
+  });
+  const [pos,setPos] = useState(init.start);
+  const [moves,setMoves] = useState(0);
+  const isWall = (r,c) => !init.grid[r] || init.grid[r][c]===undefined || init.grid[r][c]==='#';
+
+  function move(dr,dc){
+    const nr=pos.r+dr, nc=pos.c+dc;
+    if(isWall(nr,nc)) return;
+    setPos({r:nr,c:nc});
+    const nm=moves+1; setMoves(nm);
+    if(nr===init.goal.r && nc===init.goal.c){ setTimeout(win,300); }
+    else if(nm>=moveLimit){ setTimeout(lose,300); }
+  }
+
+  return e("div",null,
+    e("div",{className:"pTitle"},"迷宮試煉"),
+    e("div",{className:"pDesc"},"用方向鍵走出迷宮，抵達 🚩。步數上限 ",moveLimit," （已走 ",moves," 步）"),
+    e("div",{className:"centerCol"},
+      e("div",{className:"mazeGrid",style:{gridTemplateColumns:`repeat(${init.grid[0].length},34px)`}},
+        init.grid.map((row,r)=>row.map((ch,c)=>{
+          let bg = ch==='#' ? "#1C2622" : "#EFE4C4";
+          let content = "";
+          if(init.goal.r===r && init.goal.c===c && !(pos.r===r&&pos.c===c)) content="🚩";
+          if(pos.r===r && pos.c===c) content="🧑";
+          return e("div",{key:`${r}-${c}`,className:"mazeCell",style:{background:bg}},content);
+        }))),
+      e("div",{className:"arrowPad"},
+        e("div",null),e("button",{className:"arrowBtn",onClick:()=>move(-1,0)},"↑"),e("div",null),
+        e("button",{className:"arrowBtn",onClick:()=>move(0,-1)},"←"),
+        e("button",{className:"arrowBtn",onClick:()=>move(1,0)},"↓"),
+        e("button",{className:"arrowBtn",onClick:()=>move(0,1)},"→"))),
+    e(GiveUp,{onLose:lose}));
+}
+
+// ---- 8. 數獨 4x4 ----
+const SUDOKU_BASE = [[1,2,3,4],[3,4,1,2],[2,1,4,3],[4,3,2,1]];
+function genSudoku(blanks=6){
+  const perm = shuffle([1,2,3,4]);
+  const solved = SUDOKU_BASE.map(row=>row.map(v=>perm[v-1]));
+  const cells = shuffle(Array.from({length:16},(_,i)=>i)).slice(0,blanks);
+  const puzzle = solved.map(row=>[...row]);
+  cells.forEach(idx=>{ puzzle[Math.floor(idx/4)][idx%4] = 0; });
+  return {puzzle, blankSet:new Set(cells)};
+}
+function checkSudokuValid(grid){
+  for(let i=0;i<4;i++){
+    const row = grid[i], col = grid.map(r=>r[i]);
+    if(row.includes(0) || col.includes(0)) return false;
+    if(new Set(row).size!==4 || new Set(col).size!==4) return false;
+  }
+  const boxes = [[0,0],[0,2],[2,0],[2,2]];
+  for(const [br,bc] of boxes){
+    const vals = [grid[br][bc],grid[br][bc+1],grid[br+1][bc],grid[br+1][bc+1]];
+    if(new Set(vals).size!==4) return false;
+  }
+  return true;
+}
+function SudokuGame({onWin,onLose}){
+  const [win,lose] = useGuardedResult(onWin,onLose);
+  const [data] = useState(()=>genSudoku(6));
+  const [grid,setGrid] = useState(()=>data.puzzle.map(r=>[...r]));
+  const [selected,setSelected] = useState(null);
+  const [tries,setTries] = useState(0);
+  const MAX_TRIES = 6;
+
+  function selectCell(r,c){ if(data.blankSet.has(r*4+c)) setSelected({r,c}); }
+  function setNum(n){
+    if(!selected) return;
+    const ng = grid.map(row=>[...row]);
+    ng[selected.r][selected.c] = n;
+    setGrid(ng);
+  }
+  function check(){
+    const filled = grid.every(row=>row.every(v=>v!==0));
+    if(!filled) return;
+    if(checkSudokuValid(grid)){ win(); }
+    else {
+      const nt = tries+1; setTries(nt);
+      if(nt>=MAX_TRIES) lose();
+    }
+  }
+  return e("div",null,
+    e("div",{className:"pTitle"},"數獨要塞"),
+    e("div",{className:"pDesc"},"每列、每行、每個 2x2 方框都要填滿 1~4 且不重複。檢查次數上限 ",MAX_TRIES," （已用 ",tries,"）"),
+    e("div",{className:"centerCol"},
+      e("div",{className:"sudokuGrid"},
+        grid.map((row,r)=>row.map((v,c)=>{
+          const isFixed = !data.blankSet.has(r*4+c);
+          const isSel = selected && selected.r===r && selected.c===c;
+          return e("div",{key:`${r}-${c}`,className:`sudokuCell ${isFixed?"fixed":""} ${isSel?"sel":""}`,onClick:()=>selectCell(r,c)}, v||"");
+        }))),
+      e("div",{className:"padRow",style:{marginBottom:12}},
+        [1,2,3,4].map(n=> e("button",{key:n,className:"numTile",onClick:()=>setNum(n)},n)),
+        e("button",{className:"numTile",onClick:()=>setNum(0)},"×")),
+      e("button",{className:"btn pri",onClick:check},"檢查答案")),
+    e(GiveUp,{onLose:lose}));
+}
+
+// ---- 9. 推理密室 ----
+const LOGIC_PUZZLES = [
+  {
+    text:'小安、小博、小晴、小雨四人，每人喜歡一種水果：蘋果、香蕉、葡萄、橘子（不重複）。\n① 小安不喜歡蘋果和香蕉。\n② 小博喜歡葡萄。\n③ 小晴不喜歡橘子。\n④ 小雨喜歡蘋果。',
+    question:'請問小安喜歡哪種水果？', options:['蘋果','香蕉','葡萄','橘子'], answer:'橘子'
   },
-    e("div", { className: "field" },
-      e("label", null, "PIN 碼"),
-      e("input", { className: "inp mono", type: "password", autoFocus: true, value: pinInput, onChange: ev => setPinInput(ev.target.value), onKeyDown: ev => ev.key === "Enter" && attemptExit() }))
-  );
-
-  // ----- 還沒選人：大頭貼式名字牌 -----
-  if (!student) {
-    return e("div", { className: "kiosk" },
-      e("div", { className: "kiosk-top" },
-        e("h1", null, "點選你的名字"),
-        e("button", { className: "kback", onClick: () => setExitPrompt(true) }, "🔒 結束")),
-      students.length === 0
-        ? e("div", { className: "empty" }, e("h2", null, "這個班級還沒有學生"))
-        : e("div", { className: "kgrid" },
-            students.map(s => e("div", {
-              key: s.id, className: "ktile",
-              onClick: () => { setKioskStudentId(s.id); setScreen('actions'); }
-            }, s.name, e("span", { className: "kpts" }, np(s.points))))),
-      exitModal);
+  {
+    text:'三位同學參加賽跑，得到第一、二、三名：阿凱、小蓉、阿德。\n① 阿凱不是第一名。\n② 小蓉比阿德先到終點。\n③ 阿德不是最後一名。',
+    question:'請問誰是第一名？', options:['阿凱','小蓉','阿德'], answer:'小蓉'
+  },
+  {
+    text:'小竹、小雨、小晴三人，養的寵物分別是狗、貓、鳥其中一種（不重複）。\n① 小竹沒有養鳥。\n② 小雨養的不是貓也不是狗。\n③ 小晴沒有養貓。',
+    question:'請問小雨養什麼寵物？', options:['狗','貓','鳥'], answer:'鳥'
   }
-
-  // ----- 投資畫面（沿用 Market，鎖定成這位學生） -----
-  if (screen === 'market') {
-    return e("div", { className: "kiosk" },
-      e("div", { className: "kiosk-top" }, e("h1", null, student.name, "．投資"),
-        e("button", { className: "kback", onClick: () => setScreen('actions') }, "← 返回")),
-      e(Market, { market, settings, students: [student], trader: student, tradeId: student.id, setTradeId: () => {}, buy, sell, fInvest, setFInvest, className, hideSelector: true }),
-      exitModal);
+];
+function LogicGame({onWin,onLose}){
+  const [win,lose] = useGuardedResult(onWin,onLose);
+  const [q] = useState(()=>{ const p = pick(LOGIC_PUZZLES); return {...p, options: shuffle(p.options)}; });
+  const [picked,setPicked] = useState(null);
+  function choose(opt){
+    if(picked!==null) return;
+    setPicked(opt);
+    setTimeout(()=>{ if(opt===q.answer) win(); else lose(); },700);
   }
-
-  // ----- 借貸畫面（沿用 LoanCenter，鎖定成這位學生） -----
-  if (screen === 'loan') {
-    return e("div", { className: "kiosk" },
-      e("div", { className: "kiosk-top" }, e("h1", null, student.name, "．借貸"),
-        e("button", { className: "kback", onClick: () => setScreen('actions') }, "← 返回")),
-      e("div", { style: { display: "flex", justifyContent: "center", marginBottom: 16 } },
-        e("button", { className: "btn in", style: { fontSize: 20, padding: "14px 28px" }, onClick: () => open('borrow', student.id) }, "➕ 借入新款項")),
-      e(LoanCenter, { students: [student], rate, repay, fRepay, setFRepay }),
-      exitModal);
-  }
-
-  // ----- 主要動作畫面 -----
-  return e("div", { className: "kiosk" },
-    e("div", { className: "kiosk-top" },
-      e("h1", null, student.name),
-      e("button", { className: "kback", onClick: () => setExitPrompt(true) }, "🔒")),
-    e("div", { style: { textAlign: "center", marginBottom: 6 } },
-      e("div", { className: "note", style: { fontSize: 16 } }, className),
-      e("div", { className: "kBigPts" }, np(student.points), e("span", { style: { fontSize: 20, fontFamily: "var(--cjk)", marginLeft: 8 } }, "分"))),
-    onCooldown && e("div", { className: "kCooldown" }, "請稍候 ", cooldownLeft, " 秒再操作"),
-    e("div", { className: "kActionGrid" },
-      e("button", { className: "kActBtn pos", disabled: onCooldown, onClick: () => quickAction("答題", settings.answer) }, "✅ 答題 +", settings.answer),
-      e("button", { className: "kActBtn pos", disabled: onCooldown, onClick: () => quickAction("習作100", settings.workbook) }, "📘 習作 +", settings.workbook),
-      e("button", { className: "kActBtn pos", disabled: onCooldown, onClick: () => quickAction("協助同學解決錯題", settings.help) }, "🤝 助人 +", settings.help),
-      e("button", { className: "kActBtn neg", onClick: () => open("forget", student.id) }, "😅 忘記帶東西"),
-      e("button", { className: "kActBtn", onClick: () => open("exam", student.id) }, "📝 月考"),
-      e("button", { className: "kActBtn", onClick: () => open("tutor", student.id) }, "🎓 輔導"),
-      e("button", { className: "kActBtn", onClick: () => setScreen('market') }, "📈 投資"),
-      e("button", { className: "kActBtn", onClick: () => setScreen('loan') }, "🏦 借貸"),
-      e("button", { className: "kActBtn", onClick: () => open("leave", student.id) }, "🌴 請假")
-    ),
-    e("div", { style: { textAlign: "center", marginTop: 22 } },
-      e("button", { className: "btn gh", style: { fontSize: 16, padding: "12px 24px" }, onClick: () => { setKioskStudentId(null); setScreen('actions'); } }, "↩️ 換人（下一位）")),
-    exitModal);
+  return e("div",null,
+    e("div",{className:"pTitle"},"推理密室"),
+    e("div",{className:"pDesc"},"仔細看線索，只有一次作答機會！"),
+    e("div",{style:{whiteSpace:"pre-line",fontSize:14,lineHeight:1.8,background:"#fff",border:"1px solid var(--line)",borderRadius:12,padding:14,marginBottom:14}},q.text),
+    e("div",{style:{fontWeight:800,marginBottom:10}},q.question),
+    q.options.map((opt,i)=> e("button",{
+      key:i, className:"optBtn",
+      style: picked!==null ? {
+        borderColor: opt===q.answer?"var(--teal)":(opt===picked?"var(--red)":"var(--line)"),
+        background: opt===q.answer?"var(--teal-soft)":(opt===picked?"var(--red-soft)":"#fff")
+      } : {},
+      onClick:()=>choose(opt)
+    }, opt)),
+    e(GiveUp,{onLose:lose}));
 }
 
-// ===== Spark Chart =====
-function Spark({data}){
-  if(!data||data.length<2) return React.createElement("div",{className:"note",style:{marginTop:10}},"正在累積行情資料…");
-  const w=700,h=160,padX=10,padY=10,n=data.length;
-  const ohlc=data.map(d=>{const c=d.close!=null?d.close:d.price;const o=d.open!=null?d.open:c;return {o,hi:d.high!=null?d.high:Math.max(o,c),lo:d.low!=null?d.low:Math.min(o,c),c};});
-  const vals=ohlc.reduce((a,d)=>a.concat([d.hi,d.lo]),[]);
-  const min=Math.min(...vals),max=Math.max(...vals),span=max-min||1;
-  const slotW=(w-2*padX)/n,bodyW=Math.max(2,slotW*0.62);
-  const y=v=>padY+(h-2*padY)*(1-(v-min)/span);
-  return React.createElement("svg",{viewBox:`0 0 ${w} ${h}`,width:"100%",height:h,style:{marginTop:12,display:"block"},preserveAspectRatio:"none"},
-    ohlc.map((d,i)=>{
-      const cx=padX+slotW*(i+0.5),up=d.c>=d.o,col=up?"#0E9F6E":"#E05555";
-      const bT=y(Math.max(d.o,d.c)),bB=y(Math.min(d.o,d.c)),bH=Math.max(1,bB-bT);
-      return React.createElement("g",{key:i},
-        React.createElement("line",{x1:cx,x2:cx,y1:y(d.hi),y2:y(d.lo),stroke:col,strokeWidth:"1.4"}),
-        React.createElement("rect",{x:cx-bodyW/2,y:bT,width:bodyW,height:bH,fill:col}));
-    }));
+// ---- 10. 王者試煉（三階段）----
+function BossGame({onWin,onLose}){
+  const [win,lose] = useGuardedResult(onWin,onLose);
+  const [stage,setStage] = useState(0);
+  const bossMaze = ["#####","#S..#","###.#","###G#","#####"];
+  return e("div",null,
+    e("div",{className:"pTitle"},"王者試煉"),
+    e("div",{className:"pDesc"},"連續完成三個關卡才能通過，中途失敗就得重新挑戰整個王者試煉！"),
+    e("div",{className:"stageDots"},[0,1,2].map(i=> e("span",{key:i,className:i<stage?"done":(i===stage?"on":"")}))),
+    stage===0 && e(MemoryGame,{key:"s0",pairCount:3,maxMoves:8,onWin:()=>setStage(1),onLose:lose}),
+    stage===1 && e(SequenceGame,{key:"s1",rounds:1,needCorrect:1,onWin:()=>setStage(2),onLose:lose}),
+    stage===2 && e(MazeGame,{key:"s2",layout:bossMaze,moveLimit:10,onWin:win,onLose:lose}));
 }
 
-// ===== Main App =====
-function App(){
-  const [loaded,setLoaded]=useState(false);
-  const [classes,setClasses]=useState({});
-  const [activeId,setActiveId]=useState(null);
-  const [settings,setSettings]=useState(DEFAULT_SETTINGS);
-  const [market,setMarket]=useState({price:DEFAULT_SETTINGS.eth.start,history:[]});
-  const [tab,setTab]=useState("overview");
-  const [toasts,setToasts]=useState([]);
-  const [modal,setModal]=useState(null);
-  const [tradeId,setTradeId]=useState(null);
-  const [lastSaved,setLastSaved]=useState(null);
-  const [sync,setSync]=useState(HAS_GS?"ok":"err");
-  const [kioskMode,setKioskMode]=useState(false);
-  const [kioskStudentId,setKioskStudentId]=useState(null);
-  const [dbUrl,setDbUrl]=useState("");
-  // Form states
-  const [fItems,setFItems]=useState([]);
-  const [fTarget,setFTarget]=useState("");const [fActual,setFActual]=useState("");
-  const [fTutee,setFTutee]=useState("");const [fImp,setFImp]=useState("");
-  const [fBorrow,setFBorrow]=useState("");const [fVal,setFVal]=useState("");const [fNote,setFNote]=useState("");
-  const [fName,setFName]=useState("");const [fInvest,setFInvest]=useState("");const [fImport,setFImport]=useState("");
-  const [fLeaveType,setFLeaveType]=useState("病假");const [fLeaveDate,setFLeaveDate]=useState("");const [fLeaveNote,setFLeaveNote]=useState("");
-  const [leaveBusy,setLeaveBusy]=useState(false);
-  const [fRepay,setFRepay]=useState("");
+const LEVEL_COMPONENTS = {
+  memory:MemoryGame, spotdiff:SpotDiffGame, sokoban:SokobanGame, sequence:SequenceGame,
+  twentyfour:TwentyFourGame, idiom:IdiomGame, maze:MazeGame, sudoku:SudokuGame,
+  logic:LogicGame, boss:BossGame
+};
 
-  const marketRef=useRef(market);const settingsRef=useRef(settings);
-  const lastBlobRef=useRef("");const lastRemoteRef=useRef("");const pendingRef=useRef(false);const tickRef=useRef(0);
-  useEffect(()=>{marketRef.current=market;},[market]);
-  useEffect(()=>{settingsRef.current=settings;},[settings]);
+// ============================================================
+// 畫面元件
+// ============================================================
 
-  const blobOf=(cl,aid,st)=>JSON.stringify({classes:cl,activeId:aid,settings:st});
-  const setFromBlob=b=>{
-    setClasses(b.classes);
-    setActiveId(b.activeId&&b.classes[b.activeId]?b.activeId:Object.keys(b.classes)[0]);
-    setSettings({...DEFAULT_SETTINGS,...(b.settings||{})});
-  };
+function LoginScreen({onReady}){
+  const [loading,setLoading] = useState(true);
+  const [errMsg,setErrMsg] = useState(null);
+  const [roster,setRoster] = useState(null);
+  const [classId,setClassId] = useState(null);
+  const [joining,setJoining] = useState(false);
 
-  // Load
-  useEffect(()=>{(async()=>{
-    let blob=null;
-    let loadFailed=false;
-    if(HAS_GS){
-      try{const s=await gs("getData");if(s){blob=JSON.parse(s);}setSync("ok");}
-      catch(e){setSync("err");loadFailed=true;}
-    }
-    if(loadFailed){
-      // 後端連不上：只能顯示本機備份，絕對不可以把這個暫時畫面存回雲端，
-      // 以免把雲端上的真實資料覆蓋成空白。等之後連線恢復，輪詢同步會自動抓回真實資料。
-      const c=lsGet(LS_CACHE);if(c) try{blob=JSON.parse(c);}catch(_){}
-      if(!blob) blob=defaultBlob();
-      setFromBlob(blob);
-      const cj=canon(blob);lastBlobRef.current=cj;
-      // 注意：這裡刻意不設定 lastRemoteRef.current，也不呼叫 saveData。
-    } else {
-      // 成功連上後端（不論是拿到真實資料、還是真的第一次使用回傳空白）才可以視為「目前的事實」存回去
-      if(!blob){const c=lsGet(LS_CACHE);if(c) try{blob=JSON.parse(c);}catch(_){}}
-      if(!blob) blob=defaultBlob();
-      setFromBlob(blob);
-      const cj=canon(blob);lastBlobRef.current=cj;lastRemoteRef.current=cj;
-      if(HAS_GS){try{await gs("saveData",cj);lastRemoteRef.current=cj;}catch(e){}}
-    }
-    const m=lsGet(LS_MKT);if(m) try{const mm=JSON.parse(m);if(mm&&typeof mm.price==="number") setMarket(mm);}catch(_){}
-    if(HAS_GS){try{const u=await gs("getDatabaseUrl");if(u) setDbUrl(u);}catch(e){}}
-    setLoaded(true);
-  })();},[]);
-
-  // Save (debounced)
-  useEffect(()=>{
-    if(!loaded) return;
-    const js=blobOf(classes,activeId,settings);
-    if(js===lastBlobRef.current) return;
-    pendingRef.current=true;setSync("saving");
-    const t=setTimeout(async()=>{
-      lastBlobRef.current=js;lsSet(LS_CACHE,js);
-      if(HAS_GS){
-        try{await gs("saveData",js);lastRemoteRef.current=js;pendingRef.current=false;setSync("ok");setLastSaved(nowMs());}
-        catch(e){pendingRef.current=false;setSync("err");pushToast("雲端儲存失敗，已存本機備援","down");}
-      } else {pendingRef.current=false;setSync("ok");setLastSaved(nowMs());}
-    },600);
-    return ()=>clearTimeout(t);
-  },[classes,activeId,settings,loaded]);
-
-  // Polling sync
-  useEffect(()=>{
-    if(!loaded||!HAS_GS) return;
-    const iv=setInterval(async()=>{
-      if(document.hidden||pendingRef.current) return;
-      try{const s=await gs("getData");
-        if(s&&s!==lastRemoteRef.current){const b=JSON.parse(s);const cj=canon(b);lastRemoteRef.current=s;lastBlobRef.current=cj;setFromBlob(b);lsSet(LS_CACHE,cj);setSync("ok");}
-      }catch(e){setSync("err");}
-    },10000);
-    return ()=>clearInterval(iv);
-  },[loaded]);
-
-  // Market simulation
-  useEffect(()=>{
-    if(!loaded) return;
-    const iv=setInterval(()=>{
-      setMarket(prev=>{
-        const st=settingsRef.current.eth;const open=prev.price;
-        let close=open*(1+st.drift+st.vol*gaussian());
-        close=Math.max(st.start*0.2,Math.min(st.start*6,close));
-        const range=Math.abs(close-open)+open*st.vol*0.6*Math.random();
-        const high=Math.max(open,close)+range*Math.random()*0.6;
-        const low=Math.min(open,close)-range*Math.random()*0.6;
-        const history=[...prev.history,{t:nowMs(),open,high,low,close,price:close}].slice(-90);
-        const m={price:close,history};
-        tickRef.current+=1;if(tickRef.current%10===0) lsSet(LS_MKT,JSON.stringify(m));
-        return m;
-      });
-    },settings.eth.tickMs);
-    return ()=>clearInterval(iv);
-  },[loaded,settings.eth.tickMs]);
-
-  const price=market.price,rate=settings.loanRate;
-  const classList=Object.values(classes);
-  const active=classes[activeId];
-  const students=active?active.students:[];
-  const nameOf=id=>students.find(s=>s.id===id)?.name||"";
-  const cur=modal?students.find(s=>s.id===modal.id):null;
-  const trader=tradeId?students.find(s=>s.id===tradeId):null;
-  const setStudents=fn=>setClasses(prev=>{const c=prev[activeId];if(!c) return prev;return {...prev,[activeId]:{...c,students:fn(c.students)}};});
-
-  function pushToast(text,tone){const id=uid();setToasts(t=>[...t,{id,text,tone}]);setTimeout(()=>setToasts(t=>t.filter(x=>x.id!==id)),1900);}
-  const logS=(s,label,delta)=>({...s,history:[{t:nowMs(),label,delta},...s.history].slice(0,60)});
-
-  function applyDelta(id,label,delta){
-    setStudents(prev=>prev.map(s=>s.id===id?{...logS(s,label,delta),points:r1(s.points+delta)}:s));
-    if(delta!==0) pushToast(`${nameOf(id)}　${label}　${delta>0?"+":""}${np(delta)}`,delta>0?"up":"down");
-    else pushToast(`${nameOf(id)}　${label}`,null);
+  function load(){
+    setLoading(true); setErrMsg(null);
+    gs('gameRoster').then(r=>{
+      if(!r || !r.classes){ setErrMsg('讀不到班級名單，請確認 Apps Script 已經部署好遊戲後端。'); setLoading(false); return; }
+      setRoster(r); setLoading(false);
+    }).catch(err=>{ setErrMsg(err.message); setLoading(false); });
   }
+  useEffect(load,[]);
 
-  function open(kind,id){
-    setModal({kind,id});
-    const s=students.find(x=>x.id===id);
-    if(kind==="forget") setFItems([]);
-    if(kind==="exam"){setFTarget(s?.examTarget?String(s.examTarget):"80");setFActual("");}
-    if(kind==="tutor"){setFTutee("");setFImp("");}
-    if(kind==="borrow") setFBorrow("");
-    if(kind==="adjust"){setFVal("");setFNote("");}
-    if(kind==="leave"){setFLeaveType("事假");setFLeaveDate(new Date().toISOString().slice(0,10));setFLeaveNote("");}
-    if(kind==="rename") setFName(s?.name||"");
-    if(kind==="add") setFName("");
-    if(kind==="addclass") setFName("");
-    if(kind==="renclass") setFName(active?.name||"");
-    if(kind==="io") setFImport("");
-  }
-  const close=()=>setModal(null);
-
-  function confirmForget(){if(!fItems.length) return close();applyDelta(modal.id,`忘記攜帶：${fItems.join("、")}`,fItems.length*settings.forget);close();}
-  function confirmExam(){
-    const target=Number(fTarget),actual=Number(fActual);if(!Number.isFinite(actual)) return;
-    setStudents(prev=>prev.map(s=>s.id===modal.id?{...s,examTarget:target}:s));
-    const res=examBonus(actual,target,settings.bands);
-    applyDelta(modal.id,res.ok?`月考達標（目標${target}／實際${actual}）`:`月考未達標（目標${target}／實際${actual}）`,res.pts);close();
-  }
-  function confirmTutor(){
-    const imp=Number(fImp);if(!fTutee||!Number.isFinite(imp)) return;
-    const bonus=tutorBonus(imp,settings.tutor);
-    applyDelta(modal.id,`輔導 ${nameOf(fTutee)}（進步${imp}分${bonus>0?"":"，未達門檻"}）`,bonus);close();
-  }
-  function confirmBorrow(){
-    const amt=Number(fBorrow);if(!(amt>0)) return;
-    setStudents(prev=>prev.map(s=>s.id===modal.id?{...logS(s,`借貸 +${np(amt)}（日息${(rate*100).toFixed(1)}%複利）`,amt),points:r1(s.points+amt),loans:[...s.loans,{id:uid(),principal:amt,start:nowMs()}]}:s));
-    pushToast(`${nameOf(modal.id)}　借貸 +${np(amt)}`,"up");close();
-  }
-
-  // ===== 還款（支援部分還款）=====
-  function repay(sid,loan,partialAmt){
-    const owed=loanOwed(loan,rate);
-    const amt=partialAmt!=null?Math.min(partialAmt,owed):owed;
-    if(amt<=0) return;
-    const isFullRepay=amt>=owed-0.001;
-
-    if(isFullRepay){
-      const interest=owed-loan.principal;
-      setStudents(prev=>prev.map(s=>s.id===sid?{...logS(s,`還款 −${np(owed)}（利息${np(interest)}）`,-owed),points:r1(s.points-owed),loans:s.loans.filter(l=>l.id!==loan.id)}:s));
-      pushToast(`${nameOf(sid)}　還清借款 −${np(owed)}`,"down");
-    } else {
-      const remaining=owed-amt;
-      setStudents(prev=>prev.map(s=>s.id===sid?{
-        ...logS(s,`部分還款 −${np(amt)}（剩餘${np(remaining)}）`,-amt),
-        points:r1(s.points-amt),
-        loans:s.loans.map(l=>l.id===loan.id?{...l,principal:remaining,start:nowMs()}:l)
-      }:s));
-      pushToast(`${nameOf(sid)}　部分還款 −${np(amt)}，剩餘 ${np(remaining)}`,"down");
+  async function pickStudent(cls, s){
+    setJoining(true);
+    try{
+      const status = await gs('gameStatus', {className:cls.name, studentId:s.id, studentName:s.name});
+      onReady({className:cls.name, studentId:s.id, studentName:s.name, points:status.points||0, completed:(status.gameProgress&&status.gameProgress.completed)||[]});
+    }catch(err){
+      setErrMsg(err.message); setJoining(false);
     }
   }
 
-  function confirmAdjust(){const v=Number(fVal);if(!Number.isFinite(v)||v===0) return;applyDelta(modal.id,fNote||"手動調整",v);close();}
-  function confirmRename(){if(!fName.trim()) return;setStudents(prev=>prev.map(s=>s.id===modal.id?{...s,name:fName.trim()}:s));close();}
-  function confirmAdd(){if(!fName.trim()) return;setStudents(prev=>[...prev,newStudent(fName.trim())]);close();}
-  function removeStudent(id){setStudents(prev=>prev.filter(s=>s.id!==id));close();}
-  function confirmAddClass(){if(!fName.trim()) return;const c=newClass(fName.trim());setClasses(prev=>({...prev,[c.id]:c}));setActiveId(c.id);close();}
-  function confirmRenClass(){if(!fName.trim()) return;setClasses(prev=>({...prev,[activeId]:{...prev[activeId],name:fName.trim()}}));close();}
-  function delClass(){setClasses(prev=>{const cp={...prev};delete cp[activeId];setActiveId(Object.keys(cp)[0]||null);return cp;});close();}
+  if(loading) return e("div",{className:"center-loading"},"連線中，正在讀取班級名單…");
+  if(errMsg) return e("div",{className:"wrap"},
+    e("div",{className:"brandhead"},e("div",{className:"em"},"🗺️"),e("h1",null,"闖關挑戰")),
+    e("div",{className:"panel"},
+      e("div",{className:"err-box"},"連線失敗：",errMsg),
+      e("div",{style:{marginTop:14,textAlign:"center"}},e("button",{className:"btn pri",onClick:load},"重試"))));
 
-  function buy(){
-    const pts=Number(fInvest);if(!(pts>0)||!trader) return;
-    if(pts>trader.points){pushToast("分數不足，可到借貸中心借分","down");return;}
-    const eth=pts/price;
-    setStudents(prev=>prev.map(s=>s.id===tradeId?{...logS(s,`買入乙太幣 ${eth.toFixed(4)}（投入${np(pts)}分）`,-pts),points:r1(s.points-pts),eth:s.eth+eth,costBasis:s.costBasis+pts}:s));
-    pushToast(`${trader.name}　投入 ${np(pts)} 分買入乙太幣`,null);setFInvest("");
+  const classes = roster.classes;
+  if(!classId){
+    return e("div",{className:"wrap"},
+      e("div",{className:"brandhead"},e("div",{className:"em"},"🗺️"),e("h1",null,"闖關挑戰"),e("div",{className:"sub"},"花分數挑戰關卡，看誰能破關！")),
+      e("div",{className:"panel"},
+        e("div",{className:"stepTitle"},"第一步：選擇你的班級"),
+        e("div",{className:"choiceGrid"},
+          classes.map(c=> e("button",{key:c.id,className:"choiceBtn",onClick:()=>setClassId(c.id)}, c.name)))));
   }
-  function sell(frac){
-    if(!trader||trader.eth<=0) return;
-    const ethSold=trader.eth*frac,proceeds=ethSold*price,basisSold=trader.costBasis*frac,realized=proceeds-basisSold;
-    setStudents(prev=>prev.map(s=>s.id===tradeId?{...logS(s,`賣出乙太幣 ${ethSold.toFixed(4)}（損益${realized>=0?"+":""}${np(realized)}）`,r1(proceeds)),points:r1(s.points+proceeds),eth:s.eth-ethSold,costBasis:s.costBasis-basisSold}:s));
-    pushToast(`${trader.name}　賣出乙太幣　損益 ${realized>=0?"+":""}${np(realized)}`,realized>=0?"up":"down");
+  const cls = classes.find(c=>c.id===classId);
+  return e("div",{className:"wrap"},
+    e("div",{className:"brandhead"},e("div",{className:"em"},"🗺️"),e("h1",null,"闖關挑戰"),e("div",{className:"sub"},cls.name)),
+    e("div",{className:"panel"},
+      e("div",{className:"stepTitle"},"第二步：你是誰？"),
+      e("div",{className:"choiceGrid"},
+        cls.students.map(s=> e("button",{
+          key:s.id, className:"choiceBtn", disabled:joining,
+          onClick:()=>pickStudent(cls,s)
+        }, s.name))),
+      e("div",{className:"mini-note"},"選了自己的名字後，只會看到你自己的分數，不會看到同學的。"),
+      e("div",{style:{marginTop:14,textAlign:"center"}},
+        e("button",{className:"btn gh",disabled:joining,onClick:()=>setClassId(null)},"← 換班級"))));
+}
+
+function ConfirmModal({level,points,onConfirm,onCancel}){
+  const enough = points >= level.cost;
+  return e("div",{className:"overlay",onClick:onCancel},
+    e("div",{className:"modalBox",onClick:ev=>ev.stopPropagation()},
+      e("h3",null,"挑戰「",level.name,"」？"),
+      e("p",null, enough
+        ? `需要花費 ${level.cost} 分。挑戰失敗分數不退還，成功才能解鎖「${level.badgeName}」徽章。`
+        : `這關需要 ${level.cost} 分，你目前只有 ${points} 分，分數不夠喔！`),
+      e("div",{className:"btnRow"},
+        e("button",{className:"btn gh",onClick:onCancel},"取消"),
+        enough && e("button",{className:"btn gold",onClick:onConfirm},"確定挑戰"))));
+}
+
+function MapScreen({player,setPlayer,onPlay,onBadges,onSwitch}){
+  const [confirmLevel,setConfirmLevel] = useState(null);
+  const [busy,setBusy] = useState(false);
+  const [toast,setToast] = useState(null);
+
+  function statusOf(level){
+    if(player.completed.includes(level.id)) return "done";
+    const prevOk = level.id===1 || player.completed.includes(level.id-1);
+    if(!prevOk) return "locked";
+    if(player.points < level.cost) return "poor";
+    return "open";
   }
 
-  function loadDemo(){
-    const names=["王小明","陳美惠","林志豪","張雅婷","李承翰","黃詩涵"];
-    setStudents(prev=>[...prev,...names.map(newStudent)]);
-  }
-  function resetAll(){const b=defaultBlob();setFromBlob(b);setMarket({price:settings.eth.start,history:[]});close();}
-  function exportData(){
-    const text=JSON.stringify({version:5,exportedAt:new Date().toISOString(),classes,settings,market},null,2);
-    try{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type:"application/json"}));a.download=`班級計分_全部備份_${new Date().toISOString().slice(0,10)}.json`;a.click();}catch(e){}
-    try{navigator.clipboard.writeText(text);pushToast("全部備份已複製到剪貼簿",null);}catch(e){}
-  }
-  function importData(){try{const d=JSON.parse(fImport);if(d.classes){setClasses(d.classes);setActiveId(Object.keys(d.classes)[0]);}if(d.settings) setSettings({...DEFAULT_SETTINGS,...d.settings});if(d.market) setMarket(d.market);close();pushToast("已匯入資料",null);}catch(e){pushToast("匯入失敗：格式錯誤","down");}}
-  function undoLast(id){const s=students.find(x=>x.id===id);if(!s||!s.history.length) return;const last=s.history[0];applyDelta(id,`復原：${last.label}`,-last.delta);}
-  function undoHistoryEntry(id,entry){applyDelta(id,`復原：${entry.label}`,-entry.delta);}
-
-  function confirmLeave(){
-    if(!cur) return;setLeaveBusy(true);
-    const doLeave=async()=>{
-      if(HAS_GS){await gs("submitLeave",{className:active?.name||"",studentName:cur.name,leaveType:fLeaveType,date:fLeaveDate,note:fLeaveNote});}
-      setLeaveBusy(false);pushToast(`${cur.name}　已登記${fLeaveType}`,null);close();
-    };
-    doLeave().catch(()=>{setLeaveBusy(false);pushToast("請假登記失敗","down");});
+  async function startLevel(level){
+    setBusy(true);
+    try{
+      const res = await gs('gamePlay', {phase:'start', className:player.className, studentId:player.studentId, studentName:player.studentName, levelId:level.id, levelName:level.name, cost:level.cost});
+      setPlayer(p=>({...p, points: res.points}));
+      setConfirmLevel(null);
+      onPlay(level);
+    }catch(err){
+      setToast(err.message);
+      setTimeout(()=>setToast(null),2600);
+    }
+    setBusy(false);
   }
 
-  const schoolTotal=useMemo(()=>classList.reduce((a,c)=>a+classNet(c,price,rate),0),[classes,price,rate]);
-  const ranked=useMemo(()=>[...students].sort((a,b)=>netWorth(b,price,rate)-netWorth(a,price,rate)),[students,price,rate]);
-  const setS=patch=>setSettings(s=>({...s,...patch}));
-
-  if(!loaded) return React.createElement("div",{className:"loadwrap"},HAS_GS?"載入中…（連線 Google 雲端硬碟）":"載入中…（離線模式）");
-
-  const syncLabel=!HAS_GS?"本機離線模式":sync==="saving"?"儲存中…":sync==="ok"?"已同步 Google 雲端硬碟":"雲端未連上 · 已存本機";
-  const syncCls=!HAS_GS?"err":sync==="saving"?"saving":sync==="ok"?"ok":"err";
-
-  const e=React.createElement;
-  const tabList=[["overview","總覽"],["board","記分板"],["rank","排行榜"],["market","投資市場"],["loan","借貸中心"],["set","設定"]];
-
-  // ===== Render =====
-  return e(React.Fragment,null,
-    // Toasts (shared between normal view and kiosk view)
-    e("div",{className:"toasts"},toasts.map(t=>e("div",{key:t.id,className:`toast ${t.tone||""}`},t.text))),
-
-    kioskMode ? e(KioskView,{
-      students, settings, market, price, rate, className:active?.name,
-      applyDelta, open, buy, sell, repay, fInvest, setFInvest, fRepay, setFRepay,
-      kioskStudentId, setKioskStudentId, setKioskMode, pushToast
-    }) : e("div",{className:"ce-wrap"},
-    // Top bar
-    e("div",{className:"top"},
-      e("div",{className:"brand"},e("h1",null,"班級經濟計分板"),e("span",{className:"sub"},"上課帶好用具 · 積極答題 · 學會理財")),
+  return e("div",{className:"wrap"},
+    toast && e("div",{className:"overlay",onClick:()=>setToast(null)},
+      e("div",{className:"modalBox"},e("h3",null,"喔喔"),e("p",null,toast),e("div",{className:"btnRow"},e("button",{className:"btn pri",onClick:()=>setToast(null)},"了解")))),
+    confirmLevel && e(ConfirmModal,{
+      level:confirmLevel, points:player.points,
+      onCancel:()=>setConfirmLevel(null),
+      onConfirm:()=>startLevel(confirmLevel)
+    }),
+    e("div",{className:"topbar"},
+      e("div",null, e("div",{className:"who"},player.studentName), e("div",{className:"cls"},player.className)),
       e("div",{className:"spring"}),
-      e("div",{className:`syncbadge ${syncCls}`},"☁ ",syncLabel),
-      e("div",{className:"netbox"},e("div",{className:"k"},"全校身價總額（分）"),e("div",{className:"v"},money(schoolTotal,1)))
-    ),
-    // Class pills
-    e("div",{className:"classbar"},
-      e("span",{className:"lbl"},"班級"),
-      classList.map(c=>e("button",{key:c.id,className:`cpill ${c.id===activeId?"on":""}`,onClick:()=>{setActiveId(c.id);setTradeId(null);setKioskStudentId(null);}},c.name,e("span",{className:"cnt"},c.students.length))),
-      e("button",{className:"cadd",onClick:()=>open("addclass")},"＋ 新增班級")
-    ),
-    // Tabs
-    e("div",{className:"tabs"},tabList.map(([k,l])=>e("button",{key:k,className:`tab ${tab===k?"on":""}`,onClick:()=>setTab(k)},l))),
-
-    // ===== Tab content =====
-    tab==="overview"&&e(Overview,{classList,price,rate,activeName:active?.name}),
-    tab==="board"&&e(Scoreboard,{active,students,settings,price,rate,open,applyDelta,undoLast,setTab,setTradeId,loadDemo}),
-    tab==="rank"&&e(Leaderboard,{ranked,price,rate,className:active?.name}),
-    tab==="market"&&e(Market,{market,settings,students,trader,tradeId,setTradeId,buy,sell,fInvest,setFInvest,className:active?.name}),
-    tab==="loan"&&e(LoanCenter,{students,rate,repay,fRepay,setFRepay}),
-    tab==="set"&&e(Settings,{settings,setS,open,exportData,loadDemo,active,lastSaved,dbUrl,canDelClass:classList.length>1,setKioskMode}),
-    ), // end of ce-wrap div (non-kiosk branch)
-
-    // ===== Modals (shared between normal view and kiosk view) =====
-    modal&&cur&&modal.kind==="forget"&&e(Modal,{title:`${cur.name}｜忘記攜帶`,onClose:close,foot:e(React.Fragment,null,e("button",{className:"btn gh",onClick:close},"取消"),e("button",{className:"btn dg",disabled:!fItems.length,onClick:confirmForget},"扣分 ",fItems.length?`−${fItems.length*-settings.forget}`:""))},
-      e("div",{className:"note"},"每樣未攜帶的用具扣 ",-settings.forget," 分。點選今天忘記帶的："),
-      e("div",{className:"chips"},settings.items.map(it=>e("button",{key:it,className:`chip ${fItems.includes(it)?"on":""}`,onClick:()=>setFItems(a=>a.includes(it)?a.filter(x=>x!==it):[...a,it])},it)))
-    ),
-    modal&&cur&&modal.kind==="exam"&&e(Modal,{title:`${cur.name}｜月考達標加分`,onClose:close,foot:e(React.Fragment,null,e("button",{className:"btn gh",onClick:close},"取消"),e("button",{className:"btn gr",onClick:confirmExam},"確認"))},
-      e("div",{className:"note"},"自訂目標分數，實際達標才加分；加分依實際級距：",settings.bands.map(b=>`${b.min}↑ +${b.pts}`).join("、"),"。"),
-      e("div",{className:"field"},e("label",null,"自訂月考目標"),e("input",{className:"inp mono",inputMode:"numeric",value:fTarget,onChange:ev=>setFTarget(ev.target.value)})),
-      e("div",{className:"field"},e("label",null,"實際考試分數"),e("input",{className:"inp mono",inputMode:"numeric",value:fActual,onChange:ev=>setFActual(ev.target.value)})),
-      fActual!==""&&(()=>{const r=examBonus(Number(fActual),Number(fTarget),settings.bands);return e("div",{className:"big-res",style:{color:r.ok&&r.pts?"var(--green)":"var(--soft)"}},r.ok?`達標　+${r.pts}`:"未達標　+0");})()
-    ),
-    modal&&cur&&modal.kind==="tutor"&&e(Modal,{title:`${cur.name}｜輔導同學加分`,onClose:close,foot:e(React.Fragment,null,e("button",{className:"btn gh",onClick:close},"取消"),e("button",{className:"btn gr",onClick:confirmTutor},"確認"))},
-      e("div",{className:"note"},"被輔導同學進步超過 ",settings.tutor.threshold," 分：+",settings.tutor.base,"；每多 1 分再 +",settings.tutor.perPoint,"。"),
-      e("div",{className:"field"},e("label",null,"被輔導的同學"),e("select",{className:"inp",value:fTutee,onChange:ev=>setFTutee(ev.target.value)},e("option",{value:""},"請選擇…"),students.filter(s=>s.id!==cur.id).map(s=>e("option",{key:s.id,value:s.id},s.name)))),
-      e("div",{className:"field"},e("label",null,"該同學這次進步幾分"),e("input",{className:"inp mono",inputMode:"numeric",value:fImp,onChange:ev=>setFImp(ev.target.value)})),
-      fImp!==""&&(()=>{const b=tutorBonus(Number(fImp),settings.tutor);return e("div",{className:"big-res",style:{color:b>0?"var(--green)":"var(--soft)"}},b>0?`輔導加分　+${b}`:"未達門檻　+0");})()
-    ),
-    modal&&cur&&modal.kind==="borrow"&&e(Modal,{title:`${cur.name}｜借貸`,onClose:close,foot:e(React.Fragment,null,e("button",{className:"btn gh",onClick:close},"取消"),e("button",{className:"btn in",onClick:confirmBorrow},"借入"))},
-      e("div",{className:"note"},"目前分數 ",np(cur.points),"。借入的分數以每日 ",(rate*100).toFixed(1),"% 複利計息。"),
-      e("div",{className:"field"},e("label",null,"借入分數"),e("input",{className:"inp mono",inputMode:"numeric",value:fBorrow,onChange:ev=>setFBorrow(ev.target.value)})),
-      Number(fBorrow)>0&&e("div",{className:"note"},"7 天後需還約 ",np(Number(fBorrow)*Math.pow(1+rate,7))," 分。")
-    ),
-    modal&&cur&&modal.kind==="adjust"&&e(Modal,{title:`${cur.name}｜手動加減分`,onClose:close,foot:e(React.Fragment,null,e("button",{className:"btn gh",onClick:close},"取消"),e("button",{className:"btn pri",onClick:confirmAdjust},"套用"))},
-      e("div",{className:"field"},e("label",null,"加減分數（負數為扣分）"),e("input",{className:"inp mono",value:fVal,onChange:ev=>setFVal(ev.target.value)})),
-      e("div",{className:"field"},e("label",null,"原因（選填）"),e("input",{className:"inp",value:fNote,onChange:ev=>setFNote(ev.target.value)}))
-    ),
-    modal&&cur&&modal.kind==="detail"&&e(Modal,{lg:true,title:`${cur.name}｜明細`,onClose:close,foot:e("button",{className:"btn gh",onClick:close},"關閉")},
-      e("div",{style:{display:"flex",gap:8,flexWrap:"wrap"}},
-        e("button",{className:"btn gh",onClick:()=>open("adjust",cur.id)},"手動加減分"),
-        e("button",{className:"btn gh",onClick:()=>open("rename",cur.id)},"改名"),
-        e("button",{className:"btn dg",onClick:()=>setModal({kind:"delc",id:cur.id})},"移除學生")),
-      e("div",{className:"kv"},e("span",null,"目前分數"),e("span",{className:"v"},np(cur.points))),
-      e("div",{className:"kv"},e("span",null,"持有乙太幣"),e("span",{className:"v"},cur.eth.toFixed(4),"（現值 ",np(cur.eth*price)," 分）")),
-      e("div",{className:"kv"},e("span",null,"借款應還"),e("span",{className:"v",style:{color:"var(--red)"}},np(totalOwed(cur,rate))," 分")),
-      e("div",{className:"kv"},e("span",null,"身價淨值"),e("span",{className:"v"},np(netWorth(cur,price,rate))," 分")),
-      e("div",{style:{fontWeight:700,fontSize:13,marginTop:6}},"紀錄"),
-      e("div",{className:"hist"},cur.history.length===0&&e("div",{className:"note"},"尚無紀錄。"),
-        cur.history.map((h,i)=>e("div",{className:"hrow",key:i},e("span",null,h.label),e("span",{className:`hd ${h.delta>0?"p":h.delta<0?"n":""}`},h.delta===0?"—":(h.delta>0?"+":"")+np(h.delta)),
-          h.delta!==0&&e("button",{className:"mini",style:{marginLeft:6},onClick:()=>undoHistoryEntry(cur.id,h)},"復原"))))
-    ),
-    modal&&cur&&modal.kind==="leave"&&e(Modal,{title:`${cur.name}｜請假登記`,onClose:close,foot:e(React.Fragment,null,e("button",{className:"btn gh",onClick:close},"取消"),e("button",{className:"btn in",disabled:leaveBusy,onClick:confirmLeave},leaveBusy?"送出中…":"送出請假"))},
-      e("div",{className:"field"},e("label",null,"假別"),e("select",{className:"inp",value:fLeaveType,onChange:ev=>setFLeaveType(ev.target.value)},["事假","病假"].map(t=>e("option",{key:t,value:t},t)))),
-      e("div",{className:"field"},e("label",null,"請假日期"),e("input",{className:"inp mono",type:"date",value:fLeaveDate,onChange:ev=>setFLeaveDate(ev.target.value)})),
-      e("div",{className:"field"},e("label",null,"備註（選填）"),e("input",{className:"inp",value:fLeaveNote,onChange:ev=>setFLeaveNote(ev.target.value)}))
-    ),
-    modal&&cur&&modal.kind==="rename"&&e(Modal,{title:"修改姓名",onClose:close,foot:e(React.Fragment,null,e("button",{className:"btn gh",onClick:close},"取消"),e("button",{className:"btn pri",onClick:confirmRename},"儲存"))},
-      e("div",{className:"field"},e("label",null,"姓名"),e("input",{className:"inp",value:fName,onChange:ev=>setFName(ev.target.value)}))
-    ),
-    modal&&cur&&modal.kind==="delc"&&e(Modal,{title:`移除 ${cur.name}`,onClose:close,foot:e(React.Fragment,null,e("button",{className:"btn gh",onClick:close},"取消"),e("button",{className:"btn dg",onClick:()=>removeStudent(cur.id)},"確定移除"))},
-      e("div",{className:"note"},"確定要移除 ",cur.name," 嗎？所有紀錄都會刪除，無法復原。")
-    ),
-    modal&&modal.kind==="add"&&e(Modal,{title:`新增學生到 ${active?.name}`,onClose:close,foot:e(React.Fragment,null,e("button",{className:"btn gh",onClick:close},"取消"),e("button",{className:"btn pri",onClick:confirmAdd},"新增"))},
-      e("div",{className:"field"},e("label",null,"學生姓名"),e("input",{className:"inp",value:fName,onChange:ev=>setFName(ev.target.value),onKeyDown:ev=>ev.key==="Enter"&&confirmAdd(),placeholder:"輸入姓名後按 Enter",autoFocus:true}))
-    ),
-    modal&&modal.kind==="addclass"&&e(Modal,{title:"新增班級",onClose:close,foot:e(React.Fragment,null,e("button",{className:"btn gh",onClick:close},"取消"),e("button",{className:"btn pri",onClick:confirmAddClass},"新增"))},
-      e("div",{className:"field"},e("label",null,"班級名稱"),e("input",{className:"inp",value:fName,onChange:ev=>setFName(ev.target.value),onKeyDown:ev=>ev.key==="Enter"&&confirmAddClass(),autoFocus:true}))
-    ),
-    modal&&modal.kind==="renclass"&&e(Modal,{title:"重新命名班級",onClose:close,foot:e(React.Fragment,null,e("button",{className:"btn gh",onClick:close},"取消"),e("button",{className:"btn pri",onClick:confirmRenClass},"儲存"))},
-      e("div",{className:"field"},e("label",null,"班級名稱"),e("input",{className:"inp",value:fName,onChange:ev=>setFName(ev.target.value)}))
-    ),
-    modal&&modal.kind==="delclass"&&e(Modal,{title:`刪除 ${active?.name}`,onClose:close,foot:e(React.Fragment,null,e("button",{className:"btn gh",onClick:close},"取消"),e("button",{className:"btn dg",onClick:delClass},"確定刪除"))},
-      e("div",{className:"note"},"確定刪除整個「",active?.name,"」嗎？無法復原。")
-    ),
-    modal&&modal.kind==="reset"&&e(Modal,{title:"清除所有資料",onClose:close,foot:e(React.Fragment,null,e("button",{className:"btn gh",onClick:close},"取消"),e("button",{className:"btn dg",onClick:resetAll},"確定清除"))},
-      e("div",{className:"note"},"會刪除所有班級與紀錄並重設市場。建議先「匯出全部備份」。")
-    ),
-    modal&&modal.kind==="io"&&e(Modal,{lg:true,title:"匯入資料",onClose:close,foot:e(React.Fragment,null,e("button",{className:"btn gh",onClick:close},"取消"),e("button",{className:"btn pri",onClick:importData},"匯入"))},
-      e("div",{className:"note"},"貼上備份 JSON，將覆蓋目前所有資料。"),
-      e("textarea",{className:"inp mono",style:{minHeight:160,resize:"vertical"},value:fImport,onChange:ev=>setFImport(ev.target.value)})
-    )
-  );
+      e("div",{className:"ptsPill"},player.points," 分"),
+      e("button",{className:"iconBtn",onClick:onBadges},"🏅 徽章牆"),
+      e("button",{className:"iconBtn",onClick:onSwitch},"↩️ 換人")),
+    e("div",{className:"trail"},
+      LEVELS.map(level=>{
+        const st = statusOf(level);
+        const circleCls = st==='done'?'done':(st==='open'?'open':(st==='poor'?'poor':'locked'));
+        const tagText = st==='done'?'已通關':(st==='open'?'可以挑戰':(st==='poor'?`分數不足（需 ${level.cost}）`:'先過前一關'));
+        return e("div",{key:level.id,className:"node"},
+          e("div",{className:"line"}),
+          e("div",{className:`badgeCircle ${circleCls}`}, st==='done'?level.badge:level.id),
+          e("div",{className:"nodeBody"},
+            e("div",{className:"top1"}, e("span",{className:"nm"},level.name), e("span",{className:"cost"},level.cost," 分")),
+            e("div",{className:"desc"},level.desc),
+            e("span",{className:`stateTag ${circleCls}`},tagText),
+            st==='open' && e("div",{className:"playBtnRow"},
+              e("button",{className:"btn gold",disabled:busy,onClick:()=>setConfirmLevel(level)},"開始挑戰"))));
+      })));
 }
 
-// ===== Overview =====
-function Overview({classList,price,rate,activeName}){
-  const e=React.createElement;
-  const withNet=classList.map(c=>({c,net:classNet(c,price,rate)}));
-  const maxNet=Math.max(1,...withNet.map(x=>Math.abs(x.net)));
-  const allStudents=classList.flatMap(c=>c.students.map(s=>({s,cname:c.name})));
-  const top=[...allStudents].sort((a,b)=>netWorth(b.s,price,rate)-netWorth(a.s,price,rate)).slice(0,10);
-  const colors=["var(--green)","var(--indigo)","var(--gold)","#8A6FE8","#3BA6A0"];
-  return e("div",{style:{marginTop:4}},
-    e("div",{className:"ov-grid"},withNet.map(({c,net})=>{
-      const topS=[...c.students].sort((a,b)=>netWorth(b,price,rate)-netWorth(a,price,rate))[0];
-      return e("div",{className:"ovcard",key:c.id},e("h3",null,c.name),e("div",{className:"note"},c.students.length," 位學生"),
-        e("div",{className:"big"},money(net,1),e("span",{style:{fontSize:13,color:"var(--soft)",fontFamily:"var(--cjk)"}}," 分")),
-        e("div",{className:"note"},"身價第一：",topS?`${topS.name}（${np(netWorth(topS,price,rate))}）`:"—"));
-    })),
-    e("div",{className:"panel",style:{marginTop:16}},
-      e("div",{style:{fontWeight:700,marginBottom:4}},"班級身價對比"),
-      e("div",{className:"cmp"},withNet.map(({c,net},i)=>e("div",{className:"crow",key:c.id},
-        e("div",{className:"cname"},c.name),
-        e("div",{className:"track"},e("div",{className:"fill",style:{width:`${Math.max(2,Math.abs(net)/maxNet*100)}%`,background:colors[i%colors.length]}})),
-        e("div",{className:"cval"},money(net,1)))))),
-    e("div",{className:"panel",style:{marginTop:16}},
-      e("div",{style:{fontWeight:700,marginBottom:10}},"全校身價榜（前 10）"),
-      top.length===0?e("div",{className:"note"},"還沒有學生資料。"):
-      e("div",{className:"board"},top.map(({s,cname},i)=>e("div",{className:"brow",key:s.id},
-        e("div",{className:`rank ${i<3?"g"+(i+1):""}`},i+1),
-        e("div",{className:"who"},s.name),e("div",{className:"tag"},cname),
-        e("div",{className:"nw"},np(netWorth(s,price,rate))))))));
+function PlayScreen({level,onFinish}){
+  const Comp = LEVEL_COMPONENTS[level.type];
+  const [busy,setBusy] = useState(false);
+  async function finish(success){
+    if(busy) return; setBusy(true);
+    onFinish(level, success);
+  }
+  return e("div",{className:"wrap"},
+    e("div",{className:"playHead"}, e("span",{className:"lv"},"第 ",level.id," 關．",level.name), e("span",{className:"spring"})),
+    e("div",{className:"puzzleWrap"}, e(Comp,{onWin:()=>finish(true), onLose:()=>finish(false)})));
 }
 
-// ===== Scoreboard =====
-function Scoreboard({active,students,settings,price,rate,open,applyDelta,undoLast,setTab,setTradeId,loadDemo}){
-  const e=React.createElement;
-  if(!active) return e("div",{className:"empty"},e("h2",null,"沒有班級"));
-  if(students.length===0) return e("div",{className:"empty"},e("h2",null,active.name," 還沒有學生"),
-    e("div",{style:{display:"flex",gap:10,justifyContent:"center",marginTop:16}},
-      e("button",{className:"btn pri",onClick:()=>open("add")},"＋ 新增學生"),
-      e("button",{className:"btn gh",onClick:loadDemo},"載入示範名單")));
-  return e(React.Fragment,null,
-    e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:14}},
-      e("div",{style:{fontWeight:700}},active.name,e("span",{className:"note",style:{marginLeft:8}},students.length," 人")),
-      e("button",{className:"btn gh",onClick:()=>open("add")},"＋ 新增學生")),
-    e("div",{className:"grid"},students.map(s=>{
-      const owed=totalOwed(s,rate);
-      return e("div",{className:"card",key:s.id},
-        e("div",{className:"row1"},e("span",{className:"nm",onClick:()=>open("detail",s.id)},s.name),e("div",{className:"pts"},np(s.points),e("small",null,"分"))),
-        e("div",{className:"badges"},s.eth>0&&e("span",{className:"bdg eth"},"ETH ",np(s.eth*price)),owed>0.01&&e("span",{className:"bdg debt"},"欠 ",np(owed))),
-        e("div",{className:"qbtns"},
-          e("button",{className:"qbtn pos",onClick:()=>applyDelta(s.id,"答題",settings.answer)},"答題"),
-          e("button",{className:"qbtn pos",onClick:()=>applyDelta(s.id,"習作100",settings.workbook)},"習作"),
-          e("button",{className:"qbtn pos",onClick:()=>applyDelta(s.id,"協助同學解決錯題",settings.help)},"助人"),
-          e("button",{className:"qbtn neg",onClick:()=>open("forget",s.id)},"忘物")),
-        e("div",{className:"more"},
-          e("button",{className:"mini",onClick:()=>open("exam",s.id)},"月考"),
-          e("button",{className:"mini",onClick:()=>open("tutor",s.id)},"輔導"),
-          e("button",{className:"mini",onClick:()=>{setTradeId(s.id);setTab("market");}},"投資"),
-          e("button",{className:"mini",onClick:()=>open("borrow",s.id)},"借貸"),
-          e("button",{className:"mini",onClick:()=>open("leave",s.id)},"請假"),
-          e("button",{className:"mini",disabled:!s.history.length,onClick:()=>undoLast(s.id)},"↩️ 復原"),
-          e("button",{className:"mini",onClick:()=>open("detail",s.id)},"明細")));
-    })));
+function ResultScreen({level,success,onBack}){
+  return e("div",{className:"wrap"},
+    e("div",{className:"resultWrap"},
+      e("div",{className:"emoji"}, success ? "🎉" : "💧"),
+      e("h2",null, success ? "挑戰成功！" : "這次沒有過關"),
+      e("p",null, success ? "分數已經扣除，恭喜解鎖新徽章：" : "花費的分數不會退還，別灰心，下次再挑戰！"),
+      success && e("div",{className:"badgeShow"}, e("div",{className:"em"},level.badge), e("div",{className:"nm"},level.badgeName)),
+      e("button",{className:"btn gold",onClick:onBack},"返回地圖")));
 }
 
-// ===== Leaderboard =====
-function Leaderboard({ranked,price,rate,className}){
-  const e=React.createElement;
-  if(ranked.length===0) return e("div",{className:"empty"},e("h2",null,className," 目前沒有資料"));
-  const top=ranked.slice(0,3),maxNW=Math.max(1,...top.map(s=>netWorth(s,price,rate)));
-  const order=[1,0,2],colors=["var(--gold)","#AEB6BB","#C88A5C"],medals=["🥇","🥈","🥉"];
-  return e("div",{style:{marginTop:18}},
-    e("div",{style:{fontWeight:700,marginBottom:4}},className),
-    e("div",{className:"podium"},order.map(oi=>{
-      const s=top[oi];if(!s) return null;const nw=netWorth(s,price,rate),hh=50+nw/maxNW*90;
-      return e("div",{className:"pod",key:s.id},e("div",{className:"medal"},medals[oi]),e("div",{className:"pname"},s.name),e("div",{className:"pval"},np(nw)),
-        e("div",{className:"bar",style:{height:hh,background:colors[oi]}}));
-    })),
-    e("div",{className:"board"},ranked.map((s,i)=>{
-      const nw=netWorth(s,price,rate),owed=totalOwed(s,rate);
-      return e("div",{className:"brow",key:s.id},e("div",{className:`rank ${i<3?"g"+(i+1):""}`},i+1),e("div",{className:"who"},s.name),
-        e("div",{className:"comp"},"分數 ",np(s.points),s.eth>0?` · ETH ${np(s.eth*price)}`:"",owed>0.01?` · 欠 ${np(owed)}`:""),
-        e("div",{className:"nw"},np(nw)));
-    })));
+function BadgeWallScreen({player,onBack}){
+  return e("div",{className:"wrap"},
+    e("div",{className:"topbar"}, e("div",{className:"who"},player.studentName,"的徽章牆"), e("div",{className:"spring"}),
+      e("button",{className:"iconBtn",onClick:onBack},"← 回地圖")),
+    e("div",{className:"badgeGrid"},
+      LEVELS.map(level=>{
+        const got = player.completed.includes(level.id);
+        return e("div",{key:level.id,className:`badgeCard ${got?"got":""}`},
+          e("span",{className:"em"}, got ? level.badge : "🔒"),
+          e("div",{className:"nm"}, got ? level.badgeName : "尚未解鎖"),
+          e("div",{className:"st"}, "第",level.id,"關"));
+      })));
 }
 
-// ===== Market =====
-function Market({market,settings,students,trader,tradeId,setTradeId,buy,sell,fInvest,setFInvest,className,hideSelector}){
-  const e=React.createElement;
-  const hist=market.history.map(p=>p.price);const first=hist.length?hist[0]:market.price;
-  const chgPct=first?(market.price-first)/first*100:0;const up=chgPct>=0;
-  return e("div",{style:{marginTop:18}},
-    e("div",{className:"panel"},
-      e("div",{className:"mkt-head"},
-        e("div",null,e("div",{className:"note",style:{marginBottom:2}},"乙太幣 ETH · 模擬行情"),e("div",{className:"price"},money(market.price,2))),
-        e("div",{className:`chg ${up?"up":"down"}`},up?"▲":"▼"," ",money(Math.abs(chgPct),2),"%")),
-      e(Spark,{data:market.history}),
-      e("div",{className:"note",style:{marginTop:8}},"教學用模擬行情，每 ",settings.eth.tickMs/1000," 秒波動。")),
-    !hideSelector&&e("div",{className:"selstu"},
-      e("span",{style:{fontWeight:700,fontSize:13}},"選擇學生（",className,"）："),
-      e("select",{className:"inp",value:tradeId||"",onChange:ev=>setTradeId(ev.target.value||null)},
-        e("option",{value:""},"請選擇…"),students.map(s=>e("option",{key:s.id,value:s.id},s.name)))),
-    !trader?e("div",{className:"note"},"請先選擇要操作的學生。"):
-    (()=>{const value=trader.eth*market.price,pl=value-trader.costBasis,plUp=pl>=0;
-      return e("div",{className:"trade"},
-        e("div",{className:"tcard"},e("h4",null,"買入"),
-          e("div",{className:"kv"},e("span",null,"可用分數"),e("span",{className:"v"},np(trader.points))),
-          e("div",{className:"field",style:{marginTop:8}},e("label",null,"投入分數"),e("input",{className:"inp mono",inputMode:"numeric",value:fInvest,onChange:ev=>setFInvest(ev.target.value)})),
-          Number(fInvest)>0&&e("div",{className:"note",style:{marginTop:6}},"可買入約 ",(Number(fInvest)/market.price).toFixed(4)," ETH"),
-          e("button",{className:"btn in",style:{width:"100%",marginTop:10},onClick:buy},"買入乙太幣")),
-        e("div",{className:"tcard"},e("h4",null,"持倉"),
-          e("div",{className:"kv"},e("span",null,"持有"),e("span",{className:"v"},trader.eth.toFixed(4)," ETH")),
-          e("div",{className:"kv"},e("span",null,"成本"),e("span",{className:"v"},np(trader.costBasis)," 分")),
-          e("div",{className:"kv"},e("span",null,"現值"),e("span",{className:"v"},np(value)," 分")),
-          e("div",{className:"kv"},e("span",null,"損益"),e("span",{className:`pl ${plUp?"up":"down"}`},plUp?"+":"",np(pl))),
-          e("div",{className:"sellrow"},
-            e("button",{className:"btn gh",disabled:trader.eth<=0,onClick:()=>sell(0.25)},"賣 25%"),
-            e("button",{className:"btn gh",disabled:trader.eth<=0,onClick:()=>sell(0.5)},"賣 50%"),
-            e("button",{className:"btn gr",disabled:trader.eth<=0,onClick:()=>sell(1)},"全部賣出"))));
-    })());
+function App(){
+  const [player,setPlayer] = useState(null);
+  const [screen,setScreen] = useState('map');
+  const [activeLevel,setActiveLevel] = useState(null);
+  const [lastResult,setLastResult] = useState(null);
+
+  if(!player) return e(LoginScreen,{onReady:setPlayer});
+
+  if(screen==='badges') return e(BadgeWallScreen,{player,onBack:()=>setScreen('map')});
+
+  if(screen==='play' && activeLevel) return e(PlayScreen,{
+    level:activeLevel,
+    onFinish:(level,success)=>{
+      gs('gamePlay',{phase:'finish', className:player.className, studentId:player.studentId, studentName:player.studentName, levelId:level.id, levelName:level.name, badgeName:level.badgeName, success})
+        .then(res=>{
+          setPlayer(p=>({...p, points: res.points!=null?res.points:p.points, completed: res.completed||p.completed}));
+        })
+        .catch(()=>{})
+        .finally(()=>{ setLastResult({level,success}); setScreen('result'); });
+    }
+  });
+
+  if(screen==='result' && lastResult) return e(ResultScreen,{
+    level:lastResult.level, success:lastResult.success,
+    onBack:()=>{ setActiveLevel(null); setLastResult(null); setScreen('map'); }
+  });
+
+  return e(MapScreen,{
+    player, setPlayer,
+    onPlay:(level)=>{ setActiveLevel(level); setScreen('play'); },
+    onBadges:()=>setScreen('badges'),
+    onSwitch:()=>{ setPlayer(null); setScreen('map'); }
+  });
 }
 
-// ===== Loan Center (支援部分還款) =====
-function LoanCenter({students,rate,repay,fRepay,setFRepay}){
-  const e=React.createElement;
-  const withLoans=students.filter(s=>s.loans&&s.loans.length);
-  return e("div",{style:{marginTop:18}},
-    e("div",{className:"panel",style:{marginBottom:16}},
-      e("div",{style:{fontWeight:700,marginBottom:6}},"借貸規則"),
-      e("div",{className:"note"},"每日 ",(rate*100).toFixed(1),"% 複利計息。可選擇「一次還清」或輸入金額「部分還款」。部分還款後，剩餘金額會重新計息。")),
-    withLoans.length===0?e("div",{className:"note",style:{textAlign:"center",padding:30}},"本班目前沒有人有借款。"):
-    e("div",{className:"board"},withLoans.map(s=>e("div",{key:s.id,className:"loan-card"},
-      e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}},
-        e("div",{style:{fontWeight:700}},s.name),e("div",{className:"note"},"目前分數 ",np(s.points))),
-      s.loans.map(l=>{
-        const owed=loanOwed(l,rate);const days=(nowMs()-l.start)/86400000;
-        return e("div",{key:l.id,className:"loan-row"},
-          e("div",{style:{flex:1}},
-            e("div",{className:"note"},"借 ",np(l.principal)," 分 · 已 ",days<1?"不到 1":Math.floor(days)," 天 · 利息 ",np(owed-l.principal)),
-            e("div",{style:{fontWeight:700,color:"var(--red)",marginTop:4}},"應還 ",np(owed)," 分")),
-          e("div",{style:{display:"flex",flexDirection:"column",gap:6,alignItems:"flex-end"}},
-            e("button",{className:"btn dg",style:{padding:"6px 12px",fontSize:13},onClick:()=>repay(s.id,l)},"一次還清"),
-            e("div",{style:{display:"flex",gap:4,alignItems:"center"}},
-              e("input",{className:"inp mono",style:{width:90,padding:"6px 8px",fontSize:13},
-                inputMode:"numeric",placeholder:"還多少",
-                onChange:ev=>setFRepay(ev.target.value)}),
-              e("button",{className:"btn gh",style:{padding:"6px 10px",fontSize:13},
-                onClick:()=>{const amt=Number(fRepay);if(amt>0){repay(s.id,l,amt);setFRepay("");}}},"部分還款"))));
-      })))));
-}
-
-// ===== Settings =====
-function Settings({settings,setS,open,exportData,loadDemo,active,lastSaved,dbUrl,canDelClass,setKioskMode}){
-  const e=React.createElement;
-  const numField=(label,key,val)=>e("div",{className:"field"},e("label",null,label),
-    e("input",{className:"inp mono",value:val,onChange:ev=>setS({[key]:ev.target.value===""?"":Number(ev.target.value)})}));
-  const kiosk = settings.kiosk || {enabled:false,pin:"",cooldown:8};
-
-  return e("div",{style:{marginTop:18,display:"flex",flexDirection:"column",gap:16}},
-    e("div",{className:"panel"},
-      e("div",{style:{fontWeight:700,marginBottom:12}},"目前班級：",active?.name),
-      e("div",{style:{display:"flex",gap:8,flexWrap:"wrap"}},
-        e("button",{className:"btn pri",onClick:()=>open("add")},"＋ 新增學生"),
-        e("button",{className:"btn gh",onClick:loadDemo},"載入示範名單"),
-        e("button",{className:"btn gh",onClick:()=>open("renclass")},"重新命名班級"),
-        e("button",{className:"btn dg",disabled:!canDelClass,onClick:()=>open("delclass")},"刪除此班級"))),
-    e("div",{className:"panel"},
-      e("div",{style:{fontWeight:700,marginBottom:12}},"加分／扣分數值"),
-      e("div",{className:"set-grid"},numField("答題","answer",settings.answer),numField("習作 100","workbook",settings.workbook),numField("協助同學","help",settings.help),numField("忘帶用具（負數）","forget",settings.forget))),
-    e("div",{className:"panel"},
-      e("div",{style:{fontWeight:700,marginBottom:12}},"輔導加分"),
-      e("div",{className:"set-grid"},
-        e("div",{className:"field"},e("label",null,"進步門檻"),e("input",{className:"inp mono",value:settings.tutor.threshold,onChange:ev=>setS({tutor:{...settings.tutor,threshold:Number(ev.target.value)}})})),
-        e("div",{className:"field"},e("label",null,"基本加分"),e("input",{className:"inp mono",value:settings.tutor.base,onChange:ev=>setS({tutor:{...settings.tutor,base:Number(ev.target.value)}})})),
-        e("div",{className:"field"},e("label",null,"每分加分"),e("input",{className:"inp mono",value:settings.tutor.perPoint,onChange:ev=>setS({tutor:{...settings.tutor,perPoint:Number(ev.target.value)}})})))),
-    e("div",{className:"panel"},
-      e("div",{style:{fontWeight:700,marginBottom:12}},"借貸與投資"),
-      e("div",{className:"set-grid"},
-        e("div",{className:"field"},e("label",null,"每日利率（%）"),e("input",{className:"inp mono",value:settings.loanRate*100,onChange:ev=>setS({loanRate:Number(ev.target.value)/100})})),
-        e("div",{className:"field"},e("label",null,"乙太幣起始價"),e("input",{className:"inp mono",value:settings.eth.start,onChange:ev=>setS({eth:{...settings.eth,start:Number(ev.target.value)}})})),
-        e("div",{className:"field"},e("label",null,"波動幅度"),e("input",{className:"inp mono",value:settings.eth.vol,onChange:ev=>setS({eth:{...settings.eth,vol:Number(ev.target.value)}})})),
-        e("div",{className:"field"},e("label",null,"更新間隔(ms)"),e("input",{className:"inp mono",value:settings.eth.tickMs,onChange:ev=>setS({eth:{...settings.eth,tickMs:Math.max(500,Number(ev.target.value))}})})))),
-    e("div",{className:"panel"},
-      e("div",{style:{fontWeight:700,marginBottom:6}},"🖥️ 大螢幕自助登記模式"),
-      e("div",{className:"note",style:{marginBottom:12}},"讓孩子自己在教室電視／平板上點自己的名字，登記答題、忘物、投資、借貸、請假。啟動後畫面會鎖住，只能做這些操作，要離開需要輸入下面設定的 PIN 碼。"),
-      e("div",{className:"set-grid"},
-        e("div",{className:"field"},e("label",null,"退出用 PIN 碼"),e("input",{className:"inp mono",value:kiosk.pin,onChange:ev=>setS({kiosk:{...kiosk,pin:ev.target.value}}),placeholder:"例如 1234"})),
-        e("div",{className:"field"},e("label",null,"每次操作冷卻秒數"),e("input",{className:"inp mono",value:kiosk.cooldown,onChange:ev=>setS({kiosk:{...kiosk,cooldown:Math.max(0,Number(ev.target.value)||0)}})}))),
-      e("div",{style:{marginTop:12}},
-        e("button",{
-          className:"btn in",
-          disabled:!kiosk.pin,
-          onClick:()=>setKioskMode(true)
-        },"🖥️ 啟動大螢幕模式")),
-      !kiosk.pin&&e("div",{className:"note",style:{color:"var(--red)",marginTop:6}},"請先設定 PIN 碼才能啟動（不然畫面鎖住後就沒辦法離開了）。")),
-    e("div",{className:"panel"},
-      e("div",{style:{fontWeight:700,marginBottom:8}},"資料安全"),
-      e("div",{className:"saved",style:{marginBottom:10}},e("span",{className:"dot"}),"資料存在 Google 雲端硬碟",lastSaved?` · 上次儲存 ${clock(lastSaved)}`:""),
-      !HAS_GS&&e("div",{className:"note",style:{color:"var(--red)",marginBottom:10}},"⚠️ 尚未設定 SCRIPT_URL！請編輯 index.html 頂部的 SCRIPT_URL 常數，貼上你的 Apps Script 部署網址。目前為離線模式，資料只存在瀏覽器 localStorage。"),
-      e("div",{style:{display:"flex",gap:8,flexWrap:"wrap"}},
-        dbUrl&&e("a",{className:"btn in",href:dbUrl,target:"_blank",rel:"noreferrer",style:{textDecoration:"none"}},"📊 開啟後台試算表"),
-        e("button",{className:"btn gr",onClick:exportData},"匯出全部備份"),
-        e("button",{className:"btn gh",onClick:()=>open("io")},"匯入資料"),
-        e("button",{className:"btn dg",onClick:()=>open("reset")},"清除全部"))));
-}
-
-ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App,null));
+ReactDOM.createRoot(document.getElementById('root')).render(e(App,null));
 </script>
 </body>
 </html>
