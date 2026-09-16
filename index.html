@@ -47,6 +47,7 @@ body{margin:0;font-family:var(--cjk);color:var(--ink);background:var(--paper);-w
 .bdg{font-size:11px;font-weight:700;padding:3px 7px;border-radius:20px;font-family:var(--mono);}
 .bdg.eth{background:var(--indigo-s);color:var(--indigo);}
 .bdg.debt{background:var(--red-s);color:var(--red);}
+.bdg.exam{background:var(--gold-s);color:var(--gold);}
 .qbtns{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
 .qbtn{border:1px solid var(--line);background:#fff;border-radius:9px;padding:8px 0;font-family:var(--cjk);font-size:12px;font-weight:700;cursor:pointer;color:var(--ink);}
 .qbtn:hover{border-color:var(--ink);}
@@ -245,7 +246,9 @@ const newStudent = (name,extra) => {
   const x = (extra && typeof extra === "object") ? extra : {};
   return {id:uid(),name,
     seatNumber:x.seatNumber||"", studentNumber:x.studentNumber||"", gender:x.gender||"",
-    points:0,eth:0,costBasis:0,loans:[],examTarget:80,history:[],gameProgress:{completed:[]}};
+    points:0,eth:0,costBasis:0,loans:[],
+    examTarget:80,examTargetSetAt:null,examGraded:false,
+    history:[],gameProgress:{completed:[]}};
 };
 const newClass = (name,students=[]) => ({id:uid(),name,students});
 function defaultBlob(){
@@ -372,14 +375,16 @@ function KioskView({students, settings, market, price, rate, className, applyDel
       e("button", { className: "kback", onClick: () => setExitPrompt(true) }, "🔒")),
     e("div", { style: { textAlign: "center", marginBottom: 6 } },
       e("div", { className: "note", style: { fontSize: 16 } }, className),
-      e("div", { className: "kBigPts" }, np(student.points), e("span", { style: { fontSize: 20, fontFamily: "var(--cjk)", marginLeft: 8 } }, "分"))),
+      e("div", { className: "kBigPts" }, np(student.points), e("span", { style: { fontSize: 20, fontFamily: "var(--cjk)", marginLeft: 8 } }, "分")),
+      student.examTargetSetAt && !student.examGraded && e("div", { className: "note", style: { color: "var(--gold)", fontSize: 16, marginTop: 4 } }, "🎯 這次月考目標：", student.examTarget, " 分（等成績公布後登記）")),
     onCooldown && e("div", { className: "kCooldown" }, "請稍候 ", cooldownLeft, " 秒再操作"),
     e("div", { className: "kActionGrid" },
       e("button", { className: "kActBtn pos", disabled: onCooldown, onClick: () => quickAction("答題", settings.answer) }, "✅ 答題 +", settings.answer),
       e("button", { className: "kActBtn pos", disabled: onCooldown, onClick: () => quickAction("習作100", settings.workbook) }, "📘 習作 +", settings.workbook),
       e("button", { className: "kActBtn pos", disabled: onCooldown, onClick: () => quickAction("協助同學解決錯題", settings.help) }, "🤝 助人 +", settings.help),
       e("button", { className: "kActBtn neg", disabled: onCooldown, onClick: () => openGated("forget") }, "😅 忘記帶東西"),
-      e("button", { className: "kActBtn", disabled: onCooldown, onClick: () => openGated("exam") }, "📝 月考"),
+      e("button", { className: "kActBtn", disabled: onCooldown, onClick: () => openGated("examtarget") }, "🎯 月考目標"),
+      e("button", { className: "kActBtn", disabled: onCooldown, onClick: () => openGated("examscore") }, "📝 月考成績"),
       e("button", { className: "kActBtn", disabled: onCooldown, onClick: () => openGated("tutor") }, "🎓 輔導"),
       e("button", { className: "kActBtn", onClick: () => setScreen('market') }, "📈 投資"),
       e("button", { className: "kActBtn", onClick: () => setScreen('loan') }, "🏦 借貸"),
@@ -561,7 +566,8 @@ function App(){
     setModal({kind,id});
     const s=students.find(x=>x.id===id);
     if(kind==="forget") setFItems([]);
-    if(kind==="exam"){setFTarget(s?.examTarget?String(s.examTarget):"80");setFActual("");}
+    if(kind==="examtarget") setFTarget(s?.examTarget!=null?String(s.examTarget):"80");
+    if(kind==="examscore") setFActual("");
     if(kind==="tutor"){setFTutee("");setFImp("");}
     if(kind==="borrow") setFBorrow("");
     if(kind==="adjust"){setFVal("");setFNote("");}
@@ -575,11 +581,24 @@ function App(){
   const close=()=>setModal(null);
 
   function confirmForget(){if(!fItems.length) return close();applyDelta(modal.id,`忘記攜帶：${fItems.join("、")}`,fItems.length*settings.forget);close();}
-  function confirmExam(){
-    const target=Number(fTarget),actual=Number(fActual);if(!Number.isFinite(actual)) return;
-    setStudents(prev=>prev.map(s=>s.id===modal.id?{...s,examTarget:target}:s));
+  // ===== 月考：分成兩步驟 =====
+  // ① 考前：學生自己設定目標（不加分，只記錄，delta 為 0）
+  function confirmExamTarget(){
+    const target=Number(fTarget);if(!Number.isFinite(target)) return;
+    const label=`設定月考目標：${target}分`;
+    setStudents(prev=>prev.map(s=>s.id===modal.id?{...logS(s,label,0),examTarget:target,examTargetSetAt:nowMs(),examGraded:false}:s));
+    pushToast(`${nameOf(modal.id)}　設定月考目標 ${target} 分`,null);
+    bumpKioskCooldown();close();
+  }
+  // ② 考後：輸入實際分數，一律用「考前已設定的目標」計算，不能臨時改目標
+  function confirmExamScore(){
+    const actual=Number(fActual);if(!Number.isFinite(actual)||!cur) return;
+    const target=(cur.examTarget!=null)?cur.examTarget:80;
     const res=examBonus(actual,target,settings.bands);
-    applyDelta(modal.id,res.ok?`月考達標（目標${target}／實際${actual}）`:`月考未達標（目標${target}／實際${actual}）`,res.pts);close();
+    const label=res.ok?`月考達標（目標${target}／實際${actual}）`:`月考未達標（目標${target}／實際${actual}）`;
+    setStudents(prev=>prev.map(s=>s.id===modal.id?{...logS(s,label,res.pts),points:r1(s.points+res.pts),examGraded:true}:s));
+    pushToast(`${nameOf(modal.id)}　${label}　${res.pts>0?"+":""}${np(res.pts)}`,res.pts>0?"up":null);
+    bumpKioskCooldown();close();
   }
   function confirmTutor(){
     const imp=Number(fImp);if(!fTutee||!Number.isFinite(imp)) return;
@@ -721,11 +740,18 @@ function App(){
       e("div",{className:"note"},"每樣未攜帶的用具扣 ",-settings.forget," 分。點選今天忘記帶的："),
       e("div",{className:"chips"},settings.items.map(it=>e("button",{key:it,className:`chip ${fItems.includes(it)?"on":""}`,onClick:()=>setFItems(a=>a.includes(it)?a.filter(x=>x!==it):[...a,it])},it)))
     ),
-    modal&&cur&&modal.kind==="exam"&&e(Modal,{title:`${cur.name}｜月考達標加分`,onClose:close,foot:e(React.Fragment,null,e("button",{className:"btn gh",onClick:close},"取消"),e("button",{className:"btn gr",onClick:confirmExam},"確認"))},
-      e("div",{className:"note"},"自訂目標分數，實際達標才加分；加分依實際級距：",settings.bands.map(b=>`${b.min}↑ +${b.pts}`).join("、"),"。"),
+    modal&&cur&&modal.kind==="examtarget"&&e(Modal,{title:`${cur.name}｜設定月考目標`,onClose:close,foot:e(React.Fragment,null,e("button",{className:"btn gh",onClick:close},"取消"),e("button",{className:"btn gr",onClick:confirmExamTarget},"確認"))},
+      e("div",{className:"note"},"考前先讓孩子自己設定這次月考的目標分數，設定後不會馬上加分。等成績公布、登記實際分數時，會依照這個目標計算加分，避免看到分數才回頭改目標。"),
       e("div",{className:"field"},e("label",null,"自訂月考目標"),e("input",{className:"inp mono",inputMode:"numeric",value:fTarget,onChange:ev=>setFTarget(ev.target.value)})),
+      cur.examTargetSetAt&&e("div",{className:"note"},"目前已設定：",cur.examTarget,"分（",clock(cur.examTargetSetAt),"）",cur.examGraded?"，這次月考已經登記過成績了":"，尚未登記成績")
+    ),
+    modal&&cur&&modal.kind==="examscore"&&e(Modal,{title:`${cur.name}｜月考成績登記`,onClose:close,foot:e(React.Fragment,null,e("button",{className:"btn gh",onClick:close},"取消"),e("button",{className:"btn gr",onClick:confirmExamScore},"確認"))},
+      cur.examTargetSetAt
+        ? e("div",{className:"note"},"目標分數：",e("b",null,cur.examTarget),"分（設定於 ",clock(cur.examTargetSetAt),"）。加分依實際級距：",settings.bands.map(b=>`${b.min}↑ +${b.pts}`).join("、"),"。")
+        : e("div",{className:"note",style:{color:"var(--red)"}},"這位同學這次沒有先設定目標，將以預設 80 分計算達標。"),
       e("div",{className:"field"},e("label",null,"實際考試分數"),e("input",{className:"inp mono",inputMode:"numeric",value:fActual,onChange:ev=>setFActual(ev.target.value)})),
-      fActual!==""&&(()=>{const r=examBonus(Number(fActual),Number(fTarget),settings.bands);return e("div",{className:"big-res",style:{color:r.ok&&r.pts?"var(--green)":"var(--soft)"}},r.ok?`達標　+${r.pts}`:"未達標　+0");})()
+      fActual!==""&&(()=>{const r=examBonus(Number(fActual),cur.examTarget!=null?cur.examTarget:80,settings.bands);return e("div",{className:"big-res",style:{color:r.ok&&r.pts?"var(--green)":"var(--soft)"}},r.ok?`達標　+${r.pts}`:"未達標　+0");})(),
+      cur.examGraded&&e("div",{className:"note",style:{color:"var(--gold)"}},"⚠️ 這個目標已經登記過一次成績，再送出一次會再加一次分，請確認不是重複操作。")
     ),
     modal&&cur&&modal.kind==="tutor"&&e(Modal,{title:`${cur.name}｜輔導同學加分`,onClose:close,foot:e(React.Fragment,null,e("button",{className:"btn gh",onClick:close},"取消"),e("button",{className:"btn gr",onClick:confirmTutor},"確認"))},
       e("div",{className:"note"},"被輔導同學進步超過 ",settings.tutor.threshold," 分：+",settings.tutor.base,"；每多 1 分再 +",settings.tutor.perPoint,"。"),
@@ -751,6 +777,10 @@ function App(){
       e("div",{className:"kv"},e("span",null,"持有乙太幣"),e("span",{className:"v"},cur.eth.toFixed(4),"（現值 ",np(cur.eth*price)," 分）")),
       e("div",{className:"kv"},e("span",null,"借款應還"),e("span",{className:"v",style:{color:"var(--red)"}},np(totalOwed(cur,rate))," 分")),
       e("div",{className:"kv"},e("span",null,"身價淨值"),e("span",{className:"v"},np(netWorth(cur,price,rate))," 分")),
+      e("div",{className:"kv"},e("span",null,"月考狀態"),e("span",{className:"v"},
+        cur.examTargetSetAt
+          ? `目標 ${cur.examTarget} 分（${cur.examGraded?"已登記成績":"待登記成績"}）`
+          : "尚未設定目標")),
       e("div",{style:{fontWeight:700,fontSize:13,marginTop:6}},"紀錄"),
       e("div",{className:"hist"},cur.history.length===0&&e("div",{className:"note"},"尚無紀錄。"),
         cur.history.map((h,i)=>e("div",{className:"hrow",key:i},e("span",null,h.label),e("span",{className:`hd ${h.delta>0?"p":h.delta<0?"n":""}`},h.delta===0?"—":(h.delta>0?"+":"")+np(h.delta)),
@@ -846,14 +876,16 @@ function Scoreboard({active,students,settings,price,rate,open,applyDelta,undoLas
       const owed=totalOwed(s,rate);
       return e("div",{className:"card",key:s.id},
         e("div",{className:"row1"},e("span",{className:"nm",onClick:()=>open("detail",s.id)},s.name),e("div",{className:"pts"},np(s.points),e("small",null,"分"))),
-        e("div",{className:"badges"},s.eth>0&&e("span",{className:"bdg eth"},"ETH ",np(s.eth*price)),owed>0.01&&e("span",{className:"bdg debt"},"欠 ",np(owed))),
+        e("div",{className:"badges"},s.eth>0&&e("span",{className:"bdg eth"},"ETH ",np(s.eth*price)),owed>0.01&&e("span",{className:"bdg debt"},"欠 ",np(owed)),
+          s.examTargetSetAt&&!s.examGraded&&e("span",{className:"bdg exam"},"🎯 目標 ",s.examTarget,"分")),
         e("div",{className:"qbtns"},
           e("button",{className:"qbtn pos",onClick:()=>applyDelta(s.id,"答題",settings.answer)},"答題"),
           e("button",{className:"qbtn pos",onClick:()=>applyDelta(s.id,"習作100",settings.workbook)},"習作"),
           e("button",{className:"qbtn pos",onClick:()=>applyDelta(s.id,"協助同學解決錯題",settings.help)},"助人"),
           e("button",{className:"qbtn neg",onClick:()=>open("forget",s.id)},"忘物")),
         e("div",{className:"more"},
-          e("button",{className:"mini",onClick:()=>open("exam",s.id)},"月考"),
+          e("button",{className:"mini",onClick:()=>open("examtarget",s.id)},"🎯 月考目標"),
+          e("button",{className:"mini",onClick:()=>open("examscore",s.id)},"📝 月考成績"),
           e("button",{className:"mini",onClick:()=>open("tutor",s.id)},"輔導"),
           e("button",{className:"mini",onClick:()=>{setTradeId(s.id);setTab("market");}},"投資"),
           e("button",{className:"mini",onClick:()=>open("borrow",s.id)},"借貸"),
