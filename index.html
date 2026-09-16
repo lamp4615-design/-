@@ -66,7 +66,7 @@ body{margin:0;font-family:var(--cjk);color:var(--ink);background:var(--paper);-w
 .empty{text-align:center;padding:60px 20px;color:var(--soft);}
 .empty h2{color:var(--ink);}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;}
-.overlay{position:fixed;inset:0;background:rgba(20,30,36,.42);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50;}
+.overlay{position:fixed;inset:0;background:rgba(20,30,36,.42);display:flex;align-items:center;justify-content:center;padding:20px;z-index:200;}
 .modal{background:#fff;border-radius:16px;width:100%;max-width:440px;max-height:88vh;overflow:auto;box-shadow:0 24px 60px rgba(0,0,0,.24);}
 .modal.lg{max-width:560px;}
 .mhead{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--line);}
@@ -83,7 +83,7 @@ body{margin:0;font-family:var(--cjk);color:var(--ink);background:var(--paper);-w
 .note{font-size:13px;color:var(--soft);line-height:1.6;}
 .big-res{font-family:var(--mono);font-size:26px;font-weight:800;text-align:center;}
 .mfoot{display:flex;gap:8px;justify-content:flex-end;padding:14px 18px;border-top:1px solid var(--line);}
-.toasts{position:fixed;top:16px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:8px;z-index:80;pointer-events:none;}
+.toasts{position:fixed;top:16px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:8px;z-index:300;pointer-events:none;}
 .toast{background:var(--ink);color:#fff;padding:9px 16px;border-radius:22px;font-weight:700;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.22);}
 .toast.up{background:var(--green);}.toast.down{background:var(--red);}
 .board{display:flex;flex-direction:column;gap:8px;}
@@ -162,6 +162,21 @@ body{margin:0;font-family:var(--cjk);color:var(--ink);background:var(--paper);-w
 .kBigPts{font-family:var(--mono);font-size:52px;font-weight:800;text-align:center;}
 .kCooldown{text-align:center;color:var(--red);font-weight:700;margin-bottom:10px;}
 
+/* 大螢幕模式下，彈出視窗要放大才看得清楚 */
+body.kiosk-on .modal{max-width:660px;}
+body.kiosk-on .modal.lg{max-width:820px;}
+body.kiosk-on .mhead h3{font-size:26px;}
+body.kiosk-on .x{font-size:34px;}
+body.kiosk-on .mbody{gap:20px;padding:24px;}
+body.kiosk-on .note{font-size:17px;}
+body.kiosk-on .field label{font-size:16px;}
+body.kiosk-on .inp{font-size:20px;padding:14px 16px;}
+body.kiosk-on .chip{font-size:19px;padding:12px 22px;}
+body.kiosk-on .chips{gap:12px;}
+body.kiosk-on .big-res{font-size:34px;}
+body.kiosk-on .mfoot .btn{font-size:19px;padding:14px 26px;}
+body.kiosk-on .toast{font-size:22px;padding:14px 26px;}
+
 /* Loan partial */
 .loan-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px;}
 .loan-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line);}
@@ -192,7 +207,7 @@ async function gs(action, payload) {
   if (!SCRIPT_URL) throw new Error('SCRIPT_URL 尚未設定');
   const body = {action};
   if (action === 'saveData') body.data = payload;
-  else if (action === 'submitLeave') body.payload = payload;
+  else if (payload !== undefined) body.payload = payload;
   const resp = await fetch(SCRIPT_URL, {
     method: 'POST',
     headers: {'Content-Type': 'text/plain'},
@@ -200,14 +215,16 @@ async function gs(action, payload) {
     redirect: 'follow'
   });
   const text = await resp.text();
+  // 注意：解析與錯誤判斷要分開。舊版把 throw 寫在 try 裡，
+  // 後端回 {ok:false,error:...} 時會被自己的 catch 接走，變成「靜默成功」。
+  let json;
   try {
-    const json = JSON.parse(text);
-    if (!json.ok) throw new Error(json.error || 'API error');
-    return json.result;
-  } catch(e) {
-    // Apps Script sometimes returns the raw result
-    return text;
+    json = JSON.parse(text);
+  } catch (e) {
+    throw new Error('伺服器回應格式錯誤（可能是部署網址失效或未授權）：' + String(text).slice(0, 120));
   }
+  if (!json.ok) throw new Error(json.error || 'API error');
+  return json.result;
 }
 
 const HAS_GS = !!SCRIPT_URL;
@@ -224,7 +241,12 @@ const DEFAULT_SETTINGS = {
   eth:{start:3500,vol:0.014,drift:0.0004,tickMs:3000},
   kiosk:{enabled:false,pin:"",cooldown:8}
 };
-const newStudent = name => ({id:uid(),name,points:0,eth:0,costBasis:0,loans:[],examTarget:80,history:[]});
+const newStudent = (name,extra) => {
+  const x = (extra && typeof extra === "object") ? extra : {};
+  return {id:uid(),name,
+    seatNumber:x.seatNumber||"", studentNumber:x.studentNumber||"", gender:x.gender||"",
+    points:0,eth:0,costBasis:0,loans:[],examTarget:80,history:[],gameProgress:{completed:[]}};
+};
 const newClass = (name,students=[]) => ({id:uid(),name,students});
 function defaultBlob(){
   const jia=newClass("五年甲班"),yi=newClass("五年乙班");
@@ -258,12 +280,11 @@ function Modal({title,onClose,foot,children,lg}){
 }
 
 // ===== Kiosk View（給孩子在大螢幕上自助登記用）=====
-function KioskView({students, settings, market, price, rate, className, applyDelta, open, buy, sell, repay, fInvest, setFInvest, fRepay, setFRepay, kioskStudentId, setKioskStudentId, setKioskMode, pushToast}){
+function KioskView({students, settings, market, price, rate, className, applyDelta, open, buy, sell, repay, fInvest, setFInvest, fRepay, setFRepay, kioskStudentId, setKioskStudentId, setKioskMode, pushToast, cooldownUntil, setCooldownUntil}){
   const e = React.createElement;
   const [screen, setScreen] = useState('actions'); // 'actions' | 'market' | 'loan'
   const [exitPrompt, setExitPrompt] = useState(false);
   const [pinInput, setPinInput] = useState('');
-  const [cooldownUntil, setCooldownUntil] = useState(0);
   const [, forceTick] = useState(0);
 
   useEffect(() => {
@@ -277,10 +298,14 @@ function KioskView({students, settings, market, price, rate, className, applyDel
   const cooldownLeft = Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000));
   const onCooldown = cooldownLeft > 0;
 
+  // 冷卻統一由 App 的 applyDelta 觸發，這樣走彈出視窗的操作（忘物／月考／輔導）也算數
   function quickAction(label, delta) {
     if (onCooldown) return;
     applyDelta(kioskStudentId, label, delta);
-    setCooldownUntil(Date.now() + cooldownSec * 1000);
+  }
+  function openGated(kind) {
+    if (onCooldown) return;
+    open(kind, student.id);
   }
 
   function attemptExit() {
@@ -353,9 +378,9 @@ function KioskView({students, settings, market, price, rate, className, applyDel
       e("button", { className: "kActBtn pos", disabled: onCooldown, onClick: () => quickAction("答題", settings.answer) }, "✅ 答題 +", settings.answer),
       e("button", { className: "kActBtn pos", disabled: onCooldown, onClick: () => quickAction("習作100", settings.workbook) }, "📘 習作 +", settings.workbook),
       e("button", { className: "kActBtn pos", disabled: onCooldown, onClick: () => quickAction("協助同學解決錯題", settings.help) }, "🤝 助人 +", settings.help),
-      e("button", { className: "kActBtn neg", onClick: () => open("forget", student.id) }, "😅 忘記帶東西"),
-      e("button", { className: "kActBtn", onClick: () => open("exam", student.id) }, "📝 月考"),
-      e("button", { className: "kActBtn", onClick: () => open("tutor", student.id) }, "🎓 輔導"),
+      e("button", { className: "kActBtn neg", disabled: onCooldown, onClick: () => openGated("forget") }, "😅 忘記帶東西"),
+      e("button", { className: "kActBtn", disabled: onCooldown, onClick: () => openGated("exam") }, "📝 月考"),
+      e("button", { className: "kActBtn", disabled: onCooldown, onClick: () => openGated("tutor") }, "🎓 輔導"),
       e("button", { className: "kActBtn", onClick: () => setScreen('market') }, "📈 投資"),
       e("button", { className: "kActBtn", onClick: () => setScreen('loan') }, "🏦 借貸"),
       e("button", { className: "kActBtn", onClick: () => open("leave", student.id) }, "🌴 請假")
@@ -399,7 +424,9 @@ function App(){
   const [sync,setSync]=useState(HAS_GS?"ok":"err");
   const [kioskMode,setKioskMode]=useState(false);
   const [kioskStudentId,setKioskStudentId]=useState(null);
+  const [kioskCooldownUntil,setKioskCooldownUntil]=useState(0);
   const [dbUrl,setDbUrl]=useState("");
+  const [fSeat,setFSeat]=useState("");const [fNum,setFNum]=useState("");const [fGender,setFGender]=useState("");
   // Form states
   const [fItems,setFItems]=useState([]);
   const [fTarget,setFTarget]=useState("");const [fActual,setFActual]=useState("");
@@ -414,6 +441,12 @@ function App(){
   const lastBlobRef=useRef("");const lastRemoteRef=useRef("");const pendingRef=useRef(false);const tickRef=useRef(0);
   useEffect(()=>{marketRef.current=market;},[market]);
   useEffect(()=>{settingsRef.current=settings;},[settings]);
+  // 大螢幕模式時給 body 加上 class，讓彈出視窗自動放大
+  useEffect(()=>{
+    try{document.body.classList.toggle("kiosk-on",kioskMode);}catch(e){}
+    return ()=>{try{document.body.classList.remove("kiosk-on");}catch(e){}};
+  },[kioskMode]);
+
 
   const blobOf=(cl,aid,st)=>JSON.stringify({classes:cl,activeId:aid,settings:st});
   const setFromBlob=b=>{
@@ -511,10 +544,17 @@ function App(){
   function pushToast(text,tone){const id=uid();setToasts(t=>[...t,{id,text,tone}]);setTimeout(()=>setToasts(t=>t.filter(x=>x.id!==id)),1900);}
   const logS=(s,label,delta)=>({...s,history:[{t:nowMs(),label,delta},...s.history].slice(0,60)});
 
+  function bumpKioskCooldown(){
+    if(!kioskMode) return;
+    const sec=(settings.kiosk&&settings.kiosk.cooldown)||0;
+    if(sec>0) setKioskCooldownUntil(nowMs()+sec*1000);
+  }
+
   function applyDelta(id,label,delta){
     setStudents(prev=>prev.map(s=>s.id===id?{...logS(s,label,delta),points:r1(s.points+delta)}:s));
     if(delta!==0) pushToast(`${nameOf(id)}　${label}　${delta>0?"+":""}${np(delta)}`,delta>0?"up":"down");
     else pushToast(`${nameOf(id)}　${label}`,null);
+    bumpKioskCooldown();
   }
 
   function open(kind,id){
@@ -526,8 +566,8 @@ function App(){
     if(kind==="borrow") setFBorrow("");
     if(kind==="adjust"){setFVal("");setFNote("");}
     if(kind==="leave"){setFLeaveType("事假");setFLeaveDate(new Date().toISOString().slice(0,10));setFLeaveNote("");}
-    if(kind==="rename") setFName(s?.name||"");
-    if(kind==="add") setFName("");
+    if(kind==="rename"){setFName(s?.name||"");setFSeat(s?.seatNumber!=null?String(s.seatNumber):"");setFNum(s?.studentNumber||"");setFGender(s?.gender||"");}
+    if(kind==="add"){setFName("");setFSeat("");setFNum("");setFGender("");}
     if(kind==="addclass") setFName("");
     if(kind==="renclass") setFName(active?.name||"");
     if(kind==="io") setFImport("");
@@ -549,7 +589,7 @@ function App(){
   function confirmBorrow(){
     const amt=Number(fBorrow);if(!(amt>0)) return;
     setStudents(prev=>prev.map(s=>s.id===modal.id?{...logS(s,`借貸 +${np(amt)}（日息${(rate*100).toFixed(1)}%複利）`,amt),points:r1(s.points+amt),loans:[...s.loans,{id:uid(),principal:amt,start:nowMs()}]}:s));
-    pushToast(`${nameOf(modal.id)}　借貸 +${np(amt)}`,"up");close();
+    pushToast(`${nameOf(modal.id)}　借貸 +${np(amt)}`,"up");bumpKioskCooldown();close();
   }
 
   // ===== 還款（支援部分還款）=====
@@ -572,11 +612,20 @@ function App(){
       }:s));
       pushToast(`${nameOf(sid)}　部分還款 −${np(amt)}，剩餘 ${np(remaining)}`,"down");
     }
+    bumpKioskCooldown();
   }
 
   function confirmAdjust(){const v=Number(fVal);if(!Number.isFinite(v)||v===0) return;applyDelta(modal.id,fNote||"手動調整",v);close();}
-  function confirmRename(){if(!fName.trim()) return;setStudents(prev=>prev.map(s=>s.id===modal.id?{...s,name:fName.trim()}:s));close();}
-  function confirmAdd(){if(!fName.trim()) return;setStudents(prev=>[...prev,newStudent(fName.trim())]);close();}
+  function confirmRename(){
+    if(!fName.trim()) return;
+    setStudents(prev=>prev.map(s=>s.id===modal.id?{...s,name:fName.trim(),seatNumber:fSeat.trim(),studentNumber:fNum.trim(),gender:fGender}:s));
+    close();
+  }
+  function confirmAdd(){
+    if(!fName.trim()) return;
+    setStudents(prev=>[...prev,newStudent(fName.trim(),{seatNumber:fSeat.trim(),studentNumber:fNum.trim(),gender:fGender})]);
+    close();
+  }
   function removeStudent(id){setStudents(prev=>prev.filter(s=>s.id!==id));close();}
   function confirmAddClass(){if(!fName.trim()) return;const c=newClass(fName.trim());setClasses(prev=>({...prev,[c.id]:c}));setActiveId(c.id);close();}
   function confirmRenClass(){if(!fName.trim()) return;setClasses(prev=>({...prev,[activeId]:{...prev[activeId],name:fName.trim()}}));close();}
@@ -587,18 +636,18 @@ function App(){
     if(pts>trader.points){pushToast("分數不足，可到借貸中心借分","down");return;}
     const eth=pts/price;
     setStudents(prev=>prev.map(s=>s.id===tradeId?{...logS(s,`買入乙太幣 ${eth.toFixed(4)}（投入${np(pts)}分）`,-pts),points:r1(s.points-pts),eth:s.eth+eth,costBasis:s.costBasis+pts}:s));
-    pushToast(`${trader.name}　投入 ${np(pts)} 分買入乙太幣`,null);setFInvest("");
+    pushToast(`${trader.name}　投入 ${np(pts)} 分買入乙太幣`,null);setFInvest("");bumpKioskCooldown();
   }
   function sell(frac){
     if(!trader||trader.eth<=0) return;
     const ethSold=trader.eth*frac,proceeds=ethSold*price,basisSold=trader.costBasis*frac,realized=proceeds-basisSold;
     setStudents(prev=>prev.map(s=>s.id===tradeId?{...logS(s,`賣出乙太幣 ${ethSold.toFixed(4)}（損益${realized>=0?"+":""}${np(realized)}）`,r1(proceeds)),points:r1(s.points+proceeds),eth:s.eth-ethSold,costBasis:s.costBasis-basisSold}:s));
-    pushToast(`${trader.name}　賣出乙太幣　損益 ${realized>=0?"+":""}${np(realized)}`,realized>=0?"up":"down");
+    pushToast(`${trader.name}　賣出乙太幣　損益 ${realized>=0?"+":""}${np(realized)}`,realized>=0?"up":"down");bumpKioskCooldown();
   }
 
   function loadDemo(){
     const names=["王小明","陳美惠","林志豪","張雅婷","李承翰","黃詩涵"];
-    setStudents(prev=>[...prev,...names.map(newStudent)]);
+    setStudents(prev=>[...prev,...names.map(n=>newStudent(n))]);
   }
   function resetAll(){const b=defaultBlob();setFromBlob(b);setMarket({price:settings.eth.start,history:[]});close();}
   function exportData(){
@@ -639,7 +688,8 @@ function App(){
     kioskMode ? e(KioskView,{
       students, settings, market, price, rate, className:active?.name,
       applyDelta, open, buy, sell, repay, fInvest, setFInvest, fRepay, setFRepay,
-      kioskStudentId, setKioskStudentId, setKioskMode, pushToast
+      kioskStudentId, setKioskStudentId, setKioskMode, pushToast,
+      cooldownUntil:kioskCooldownUntil, setCooldownUntil:setKioskCooldownUntil
     }) : e("div",{className:"ce-wrap"},
     // Top bar
     e("div",{className:"top"},
@@ -711,14 +761,25 @@ function App(){
       e("div",{className:"field"},e("label",null,"請假日期"),e("input",{className:"inp mono",type:"date",value:fLeaveDate,onChange:ev=>setFLeaveDate(ev.target.value)})),
       e("div",{className:"field"},e("label",null,"備註（選填）"),e("input",{className:"inp",value:fLeaveNote,onChange:ev=>setFLeaveNote(ev.target.value)}))
     ),
-    modal&&cur&&modal.kind==="rename"&&e(Modal,{title:"修改姓名",onClose:close,foot:e(React.Fragment,null,e("button",{className:"btn gh",onClick:close},"取消"),e("button",{className:"btn pri",onClick:confirmRename},"儲存"))},
-      e("div",{className:"field"},e("label",null,"姓名"),e("input",{className:"inp",value:fName,onChange:ev=>setFName(ev.target.value)}))
+    modal&&cur&&modal.kind==="rename"&&e(Modal,{title:"編輯學生資料",onClose:close,foot:e(React.Fragment,null,e("button",{className:"btn gh",onClick:close},"取消"),e("button",{className:"btn pri",onClick:confirmRename},"儲存"))},
+      e("div",{className:"field"},e("label",null,"姓名"),e("input",{className:"inp",value:fName,onChange:ev=>setFName(ev.target.value)})),
+      e("div",{className:"set-grid"},
+        e("div",{className:"field"},e("label",null,"座號"),e("input",{className:"inp mono",inputMode:"numeric",value:fSeat,onChange:ev=>setFSeat(ev.target.value)})),
+        e("div",{className:"field"},e("label",null,"學號"),e("input",{className:"inp mono",inputMode:"numeric",value:fNum,onChange:ev=>setFNum(ev.target.value)}))),
+      e("div",{className:"field"},e("label",null,"性別"),e("select",{className:"inp",value:fGender,onChange:ev=>setFGender(ev.target.value)},
+        e("option",{value:""},"未填"),e("option",{value:"男"},"男"),e("option",{value:"女"},"女")))
     ),
     modal&&cur&&modal.kind==="delc"&&e(Modal,{title:`移除 ${cur.name}`,onClose:close,foot:e(React.Fragment,null,e("button",{className:"btn gh",onClick:close},"取消"),e("button",{className:"btn dg",onClick:()=>removeStudent(cur.id)},"確定移除"))},
       e("div",{className:"note"},"確定要移除 ",cur.name," 嗎？所有紀錄都會刪除，無法復原。")
     ),
     modal&&modal.kind==="add"&&e(Modal,{title:`新增學生到 ${active?.name}`,onClose:close,foot:e(React.Fragment,null,e("button",{className:"btn gh",onClick:close},"取消"),e("button",{className:"btn pri",onClick:confirmAdd},"新增"))},
-      e("div",{className:"field"},e("label",null,"學生姓名"),e("input",{className:"inp",value:fName,onChange:ev=>setFName(ev.target.value),onKeyDown:ev=>ev.key==="Enter"&&confirmAdd(),placeholder:"輸入姓名後按 Enter",autoFocus:true}))
+      e("div",{className:"field"},e("label",null,"學生姓名"),e("input",{className:"inp",value:fName,onChange:ev=>setFName(ev.target.value),onKeyDown:ev=>ev.key==="Enter"&&confirmAdd(),placeholder:"輸入姓名後按 Enter",autoFocus:true})),
+      e("div",{className:"set-grid"},
+        e("div",{className:"field"},e("label",null,"座號"),e("input",{className:"inp mono",inputMode:"numeric",value:fSeat,onChange:ev=>setFSeat(ev.target.value)})),
+        e("div",{className:"field"},e("label",null,"學號"),e("input",{className:"inp mono",inputMode:"numeric",value:fNum,onChange:ev=>setFNum(ev.target.value)}))),
+      e("div",{className:"field"},e("label",null,"性別"),e("select",{className:"inp",value:fGender,onChange:ev=>setFGender(ev.target.value)},
+        e("option",{value:""},"未填"),e("option",{value:"男"},"男"),e("option",{value:"女"},"女"))),
+      e("div",{className:"note"},"座號／學號／性別會同步到後台的「學生名冊」與「每日快照」。留空的話那幾欄會是空白。")
     ),
     modal&&modal.kind==="addclass"&&e(Modal,{title:"新增班級",onClose:close,foot:e(React.Fragment,null,e("button",{className:"btn gh",onClick:close},"取消"),e("button",{className:"btn pri",onClick:confirmAddClass},"新增"))},
       e("div",{className:"field"},e("label",null,"班級名稱"),e("input",{className:"inp",value:fName,onChange:ev=>setFName(ev.target.value),onKeyDown:ev=>ev.key==="Enter"&&confirmAddClass(),autoFocus:true}))
@@ -859,6 +920,19 @@ function Market({market,settings,students,trader,tradeId,setTradeId,buy,sell,fIn
     })());
 }
 
+// ===== 部分還款輸入（每一筆借款各自獨立，避免共用同一個欄位而還錯人）=====
+function PartialRepay({sid,loan,repay}){
+  const e=React.createElement;
+  const [amt,setAmt]=useState("");
+  const submit=()=>{const v=Number(amt);if(v>0){repay(sid,loan,v);setAmt("");}};
+  return e("div",{style:{display:"flex",gap:4,alignItems:"center"}},
+    e("input",{className:"inp mono",style:{width:90,padding:"6px 8px",fontSize:13},
+      inputMode:"numeric",placeholder:"還多少",value:amt,
+      onChange:ev=>setAmt(ev.target.value),
+      onKeyDown:ev=>ev.key==="Enter"&&submit()}),
+    e("button",{className:"btn gh",style:{padding:"6px 10px",fontSize:13},onClick:submit},"部分還款"));
+}
+
 // ===== Loan Center (支援部分還款) =====
 function LoanCenter({students,rate,repay,fRepay,setFRepay}){
   const e=React.createElement;
@@ -879,12 +953,7 @@ function LoanCenter({students,rate,repay,fRepay,setFRepay}){
             e("div",{style:{fontWeight:700,color:"var(--red)",marginTop:4}},"應還 ",np(owed)," 分")),
           e("div",{style:{display:"flex",flexDirection:"column",gap:6,alignItems:"flex-end"}},
             e("button",{className:"btn dg",style:{padding:"6px 12px",fontSize:13},onClick:()=>repay(s.id,l)},"一次還清"),
-            e("div",{style:{display:"flex",gap:4,alignItems:"center"}},
-              e("input",{className:"inp mono",style:{width:90,padding:"6px 8px",fontSize:13},
-                inputMode:"numeric",placeholder:"還多少",
-                onChange:ev=>setFRepay(ev.target.value)}),
-              e("button",{className:"btn gh",style:{padding:"6px 10px",fontSize:13},
-                onClick:()=>{const amt=Number(fRepay);if(amt>0){repay(s.id,l,amt);setFRepay("");}}},"部分還款"))));
+            e(PartialRepay,{sid:s.id,loan:l,repay})));
       })))));
 }
 
