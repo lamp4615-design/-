@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>投資市場 · 班級經濟</title>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<style>
+:root{--paper:#F6F3EC;--panel:#FFFFFF;--ink:#1B2A32;--soft:#5D6E76;--line:#E6E0D3;
+--green:#0E9F6E;--green-s:#E1F4EC;--red:#E05555;--red-s:#FBE7E7;
+--indigo:#5B6EE1;--indigo-s:#EBEDFB;--gold:#DB9B2E;--gold-s:#FAF0D9;
+--cjk:"PingFang TC","Microsoft JhengHei","Noto Sans TC","Heiti TC",sans-serif;
+--mono:"SF Mono","JetBrains Mono","Roboto Mono",ui-monospace,monospace;}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{font-family:var(--cjk);color:var(--ink);background:var(--paper);-webkit-font-smoothing:antialiased;min-height:100vh;}
+.wrap{max-width:820px;margin:0 auto;padding:16px 14px 60px;}
+.center-loading{display:flex;align-items:center;justify-content:center;min-height:80vh;color:var(--soft);font-weight:700;text-align:center;padding:0 20px;}
+.brandhead{display:flex;flex-direction:column;align-items:center;gap:4px;margin:8px 0 18px;}
+.brandhead .em{font-size:34px;}
+.brandhead h1{margin:0;font-size:22px;}
+.brandhead .sub{font-size:13px;color:var(--soft);}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px;}
+.stepTitle{font-weight:700;margin-bottom:12px;}
+.choiceGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;}
+.choiceBtn{border:1px solid var(--line);background:#fff;border-radius:12px;padding:16px 10px;font-family:var(--cjk);font-size:15px;font-weight:700;cursor:pointer;color:var(--ink);}
+.choiceBtn:hover{border-color:var(--indigo);}
+.choiceBtn:disabled{opacity:.5;cursor:not-allowed;}
+.mini-note{font-size:12px;color:var(--soft);margin-top:10px;}
+.btn{border:0;border-radius:10px;padding:10px 16px;font-family:var(--cjk);font-size:14px;font-weight:700;cursor:pointer;}
+.btn.pri{background:var(--ink);color:#fff;}
+.btn.gh{background:#fff;color:var(--ink);border:1px solid var(--line);}
+.btn.gr{background:var(--green);color:#fff;}
+.btn.dg{background:var(--red);color:#fff;}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+.err-box{background:var(--red-s);color:var(--red);border-radius:10px;padding:12px 14px;font-size:14px;}
+.topbar{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+.topbar .who{font-weight:800;font-size:18px;}
+.topbar .cls{font-size:12px;color:var(--soft);}
+.topbar .pts{margin-left:auto;font-family:var(--mono);font-size:20px;font-weight:800;}
+.topbar .pts small{font-size:11px;font-weight:600;color:var(--soft);font-family:var(--cjk);margin-left:3px;}
+.assetTabs{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+.assetTab{border:1px solid var(--line);background:#fff;border-radius:12px;padding:10px 14px;cursor:pointer;font-family:var(--cjk);display:flex;flex-direction:column;gap:2px;min-width:110px;}
+.assetTab.on{border-color:var(--indigo);background:var(--indigo-s);}
+.assetTab .nm{font-weight:700;font-size:13px;}
+.assetTab .pr{font-family:var(--mono);font-weight:800;font-size:16px;}
+.assetTab .chg{font-family:var(--mono);font-size:11px;font-weight:700;}
+.assetTab .chg.up{color:var(--green);}
+.assetTab .chg.down{color:var(--red);}
+.mkt-head{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:6px;}
+.mkt-head .price{font-family:var(--mono);font-size:34px;font-weight:800;line-height:1;}
+.mkt-head .chg{font-family:var(--mono);font-weight:700;font-size:14px;padding:3px 8px;border-radius:8px;}
+.mkt-head .chg.up{background:var(--green-s);color:var(--green);}
+.mkt-head .chg.down{background:var(--red-s);color:var(--red);}
+.tfRow{display:flex;gap:6px;margin:8px 0 4px;}
+.tfBtn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;color:var(--soft);}
+.tfBtn.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+.legend{display:flex;gap:14px;font-size:11px;color:var(--soft);margin-top:4px;}
+.legend .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;vertical-align:middle;}
+.trade{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(max-width:640px){.trade{grid-template-columns:1fr;}}
+.tcard{border:1px solid var(--line);border-radius:12px;padding:14px;background:#fff;}
+.tcard h4{margin:0 0 10px;font-size:14px;}
+.field label{display:block;font-size:12px;font-weight:700;color:var(--soft);margin-bottom:5px;}
+.inp{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-family:var(--mono);font-size:15px;color:var(--ink);}
+.inp:focus{outline:2px solid var(--indigo);border-color:transparent;}
+.note{font-size:12px;color:var(--soft);margin-top:6px;}
+.kv{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;}
+.kv .v{font-family:var(--mono);font-weight:700;}
+.pl{font-family:var(--mono);font-weight:800;font-size:18px;}
+.pl.up{color:var(--green);}.pl.down{color:var(--red);}
+.sellrow{display:flex;gap:6px;margin-top:8px;}
+.sellrow .btn{flex:1;padding:8px 0;font-size:13px;}
+.holdRow{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;}
+.holdRow:last-child{border-bottom:0;}
+.toasts{position:fixed;top:14px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:8px;z-index:300;pointer-events:none;}
+.toast{background:var(--ink);color:#fff;padding:9px 16px;border-radius:22px;font-weight:700;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.22);}
+.toast.up{background:var(--green);}.toast.down{background:var(--red);}
+.switchRow{text-align:center;margin-top:18px;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+// ============================================================
+// ⚙️ 設定：跟班級經濟計分板使用同一個 Apps Script 部署網址與金鑰
+// ============================================================
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw2LVxfHmnlggbhP5qH59mj_rOfdPkeit75peHD-GIwMBro6Ys2sNMPlBy6yaJTvKo/exec';
+const API_KEY = 'lm2v670kQyVh5SjNhot_t6N0xNBU0tSl';
+
+async function gs(action, payload) {
+  const body = {action, key: API_KEY};
+  if (payload !== undefined) body.payload = payload;
+  const resp = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    headers: {'Content-Type': 'text/plain'},
+    body: JSON.stringify(body),
+    redirect: 'follow'
+  });
+  const text = await resp.text();
+  let json;
+  try { json = JSON.parse(text); } catch (err) { throw new Error('伺服器回應格式錯誤'); }
+  if (!json.ok) throw new Error(json.error || 'API 發生錯誤');
+  return json.result;
+}
+</script>
+<script type="text/babel">
+const {useState, useEffect, useRef, useMemo} = React;
+const e = React.createElement;
+
+// ============================================================
+// 決定性行情引擎
+// ------------------------------------------------------------
+// 這段程式碼跟 index.html / Code.gs 裡的版本必須逐字一致，才能保證
+// 任何裝置、任何時間點算出來的價格位元級相同。
+// ============================================================
+const EPOCH_MS = Date.UTC(2026, 0, 1, 0, 0, 0);
+
+const ASSETS = [
+  { id: 'eth',   name: '乙太幣',   icon: '⧫', start: 3500,  driftPerYear: 0.05, noiseAmp: 0.35, noisePeriodMin: 60, baseVolume: 900,  seed: 'ce-asset-eth-v1' },
+  { id: 'gold',  name: '黃金',     icon: '🟡', start: 2000,  driftPerYear: 0.03, noiseAmp: 0.12, noisePeriodMin: 90, baseVolume: 500,  seed: 'ce-asset-gold-v1' },
+  { id: 'index', name: '大盤指數', icon: '📈', start: 15000, driftPerYear: 0.06, noiseAmp: 0.18, noisePeriodMin: 75, baseVolume: 1200, seed: 'ce-asset-index-v1' }
+];
+const assetById_ = id => ASSETS.find(a => a.id === id);
+
+function hash32_(str) {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  h ^= h >>> 15; h = Math.imul(h, 2246822519);
+  h ^= h >>> 13; h = Math.imul(h, 3266489917);
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
+const latticeVal_ = (seed, i) => hash32_(seed + '_' + i) * 2 - 1;
+const smooth_ = t => t * t * (3 - 2 * t);
+function valueNoise1D_(seed, x) {
+  const i0 = Math.floor(x), i1 = i0 + 1, f = x - i0;
+  const v0 = latticeVal_(seed, i0), v1 = latticeVal_(seed, i1);
+  return v0 + (v1 - v0) * smooth_(f);
+}
+function fbm_(seed, x, octaves) {
+  let amp = 1, freq = 1, sum = 0, norm = 0;
+  for (let o = 0; o < octaves; o++) {
+    sum += valueNoise1D_(seed + ':' + o, x * freq) * amp;
+    norm += amp;
+    amp *= 0.5; freq *= 2.3;
+  }
+  return sum / norm;
+}
+function priceAt(asset, tMs) {
+  const dtMin = (tMs - EPOCH_MS) / 60000;
+  const trendPerMin = Math.log(1 + asset.driftPerYear) / (365 * 24 * 60);
+  const noise = fbm_(asset.seed, dtMin / asset.noisePeriodMin, 7);
+  const logP = Math.log(asset.start) + trendPerMin * dtMin + asset.noiseAmp * noise;
+  const p = Math.exp(logP);
+  return Math.max(asset.start * 0.2, Math.min(asset.start * 6, p));
+}
+function candleAt(asset, bucketStartMs, bucketWidthMs, samples = 8) {
+  const vals = [];
+  for (let i = 0; i <= samples; i++) vals.push(priceAt(asset, bucketStartMs + bucketWidthMs * i / samples));
+  return { t: bucketStartMs, open: vals[0], high: Math.max(...vals), low: Math.min(...vals), close: vals[vals.length - 1] };
+}
+function volumeAt(asset, bucketStartMs, bucketWidthMs, candle) {
+  const range = candle.open > 0 ? (candle.high - candle.low) / candle.open : 0;
+  const noiseV = hash32_(asset.seed + ':vol_' + Math.floor(bucketStartMs / bucketWidthMs));
+  return Math.round(asset.baseVolume * (0.4 + range * 25) * (0.5 + 0.9 * noiseV));
+}
+function buildSeries(asset, nowMs, bucketWidthMs, count) {
+  const lastBucketStart = Math.floor(nowMs / bucketWidthMs) * bucketWidthMs;
+  const out = [];
+  for (let i = count - 1; i >= 0; i--) {
+    const bStart = lastBucketStart - i * bucketWidthMs;
+    const c = candleAt(asset, bStart, bucketWidthMs);
+    out.push({ ...c, volume: volumeAt(asset, bStart, bucketWidthMs, c) });
+  }
+  return out;
+}
+function movingAverage(series, period) {
+  const out = new Array(series.length).fill(null);
+  let sum = 0;
+  for (let i = 0; i < series.length; i++) {
+    sum += series[i].close;
+    if (i >= period) sum -= series[i - period].close;
+    if (i >= period - 1) out[i] = sum / period;
+  }
+  return out;
+}
+
+const np = x => { const v = Math.round(x * 10) / 10; return Number.isInteger(v) ? String(v) : v.toFixed(1); };
+const money = (x, d = 2) => Number(x).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+
+const TIMEFRAMES = [
+  { key: '1m', label: '1分', bucketMs: 60 * 1000, count: 60 },
+  { key: '5m', label: '5分', bucketMs: 5 * 60 * 1000, count: 60 },
+  { key: '1h', label: '1小時', bucketMs: 60 * 60 * 1000, count: 48 }
+];
+
+// ===== K 線圖（SVG）=====
+function CandleChart({ asset, tf }) {
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const iv = setInterval(() => tick(x => x + 1), 2000);
+    return () => clearInterval(iv);
+  }, []);
+
+  const series = useMemo(() => buildSeries(asset, Date.now(), tf.bucketMs, tf.count), [asset.id, tf.key, Math.floor(Date.now() / 2000)]);
+  const ma5 = movingAverage(series, 5);
+  const ma20 = movingAverage(series, 20);
+
+  const W = 760, H = 200, VH = 56, padX = 8, padTop = 8, padBottom = 8;
+  const n = series.length;
+  const highs = series.map(c => c.high), lows = series.map(c => c.low);
+  const maxP = Math.max(...highs), minP = Math.min(...lows);
+  const span = (maxP - minP) || 1;
+  const chartH = H - padTop - padBottom;
+  const y = v => padTop + chartH * (1 - (v - minP) / span);
+  const slotW = (W - 2 * padX) / n;
+  const bodyW = Math.max(2, slotW * 0.6);
+  const maxV = Math.max(...series.map(c => c.volume)) || 1;
+  const volY0 = H + 6;
+
+  const mkPoly = arr => arr.map((v, i) => (v == null ? null : `${padX + slotW * (i + 0.5)},${y(v)}`)).filter(Boolean).join(' ');
+
+  return e("svg", { viewBox: `0 0 ${W} ${H + VH + 6}`, width: "100%", height: H + VH + 6, style: { display: "block" }, preserveAspectRatio: "none" },
+    [0, 1, 2, 3, 4].map(g => e("line", { key: "g" + g, x1: 0, x2: W, y1: padTop + chartH * g / 4, y2: padTop + chartH * g / 4, stroke: "rgba(0,0,0,.06)" })),
+    series.map((c, i) => {
+      const cx = padX + slotW * (i + 0.5), up = c.close >= c.open, col = up ? "#0E9F6E" : "#E05555";
+      const bT = y(Math.max(c.open, c.close)), bB = y(Math.min(c.open, c.close));
+      return e("g", { key: i },
+        e("line", { x1: cx, x2: cx, y1: y(c.high), y2: y(c.low), stroke: col, strokeWidth: 1.2 }),
+        e("rect", { x: cx - bodyW / 2, y: bT, width: bodyW, height: Math.max(1, bB - bT), fill: col }));
+    }),
+    e("polyline", { points: mkPoly(ma5), fill: "none", stroke: "#5B6EE1", strokeWidth: 1.6 }),
+    e("polyline", { points: mkPoly(ma20), fill: "none", stroke: "#DB9B2E", strokeWidth: 1.6 }),
+    series.map((c, i) => {
+      const cx = padX + slotW * (i + 0.5), up = c.close >= c.open;
+      const h = VH * 0.85 * (c.volume / maxV);
+      return e("rect", { key: "v" + i, x: cx - bodyW / 2, y: volY0 + (VH * 0.9 - h), width: bodyW, height: h, fill: up ? "rgba(14,159,110,.5)" : "rgba(224,85,85,.5)" });
+    })
+  );
+}
+
+// ===== Toasts =====
+function useToasts() {
+  const [toasts, setToasts] = useState([]);
+  const push = (text, tone) => {
+    const id = Date.now() + '_' + Math.random();
+    setToasts(t => [...t, { id, text, tone }]);
+    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 1900);
+  };
+  return [toasts, push];
+}
+
+// ===== 選班級 / 選自己 =====
+function LoginScreen({ onReady }) {
+  const [loading, setLoading] = useState(true);
+  const [errMsg, setErrMsg] = useState(null);
+  const [roster, setRoster] = useState(null);
+  const [classId, setClassId] = useState(null);
+  const [joining, setJoining] = useState(false);
+
+  function load() {
+    setLoading(true); setErrMsg(null);
+    gs('gameRoster').then(r => {
+      if (!r || !r.classes) { setErrMsg('讀不到班級名單，請確認 Apps Script 已經部署好後端。'); setLoading(false); return; }
+      setRoster(r); setLoading(false);
+    }).catch(err => { setErrMsg(err.message); setLoading(false); });
+  }
+  useEffect(load, []);
+
+  async function pickStudent(cls, s) {
+    setJoining(true);
+    try {
+      const status = await gs('investStatus', { className: cls.name, studentId: s.id, studentName: s.name });
+      onReady({ className: cls.name, studentId: s.id, studentName: s.name, points: status.points || 0, holdings: status.holdings, owed: status.owed || 0 });
+    } catch (err) { setErrMsg(err.message); setJoining(false); }
+  }
+
+  if (loading) return e("div", { className: "center-loading" }, "連線中，正在讀取班級名單…");
+  if (errMsg) return e("div", { className: "wrap" },
+    e("div", { className: "brandhead" }, e("div", { className: "em" }, "📈"), e("h1", null, "投資市場")),
+    e("div", { className: "panel" },
+      e("div", { className: "err-box" }, "連線失敗：", errMsg),
+      e("div", { style: { marginTop: 14, textAlign: "center" } }, e("button", { className: "btn pri", onClick: load }, "重試"))));
+
+  const classes = roster.classes;
+  if (!classId) {
+    return e("div", { className: "wrap" },
+      e("div", { className: "brandhead" }, e("div", { className: "em" }, "📈"), e("h1", null, "投資市場"), e("div", { className: "sub" }, "選好自己，就能開始買賣")),
+      e("div", { className: "panel" },
+        e("div", { className: "stepTitle" }, "第一步：選擇你的班級"),
+        e("div", { className: "choiceGrid" }, classes.map(c => e("button", { key: c.id, className: "choiceBtn", onClick: () => setClassId(c.id) }, c.name)))));
+  }
+  const cls = classes.find(c => c.id === classId);
+  return e("div", { className: "wrap" },
+    e("div", { className: "brandhead" }, e("div", { className: "em" }, "📈"), e("h1", null, "投資市場"), e("div", { className: "sub" }, cls.name)),
+    e("div", { className: "panel" },
+      e("div", { className: "stepTitle" }, "第二步：你是誰？"),
+      e("div", { className: "choiceGrid" },
+        cls.students.map(s => e("button", { key: s.id, className: "choiceBtn", disabled: joining, onClick: () => pickStudent(cls, s) }, s.name))),
+      e("div", { className: "mini-note" }, "選了自己的名字後，只會看到你自己的分數與持倉，不會看到同學的。"),
+      e("div", { style: { marginTop: 14, textAlign: "center" } },
+        e("button", { className: "btn gh", disabled: joining, onClick: () => setClassId(null) }, "← 換班級"))));
+}
+
+// ===== 交易畫面 =====
+function TradeScreen({ player, setPlayer, onSwitch }) {
+  const [assetId, setAssetId] = useState('eth');
+  const [tfKey, setTfKey] = useState('1m');
+  const [fInvest, setFInvest] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [toasts, pushToast] = useToasts();
+  const [, tick] = useState(0);
+  useEffect(() => { const iv = setInterval(() => tick(x => x + 1), 2000); return () => clearInterval(iv); }, []);
+
+  const asset = assetById_(assetId);
+  const tf = TIMEFRAMES.find(t => t.key === tfKey);
+  const now = Date.now();
+  const price = priceAt(asset, now);
+  const price1hAgo = priceAt(asset, now - 3600000);
+  const chgPct = ((price - price1hAgo) / price1hAgo) * 100;
+
+  const holdings = player.holdings || {};
+  const h = holdings[assetId] || { qty: 0, costBasis: 0 };
+  const value = h.qty * price;
+  const pl = value - h.costBasis;
+
+  async function buy() {
+    const pts = Number(fInvest);
+    if (!(pts > 0)) return;
+    if (pts > player.points) { pushToast('分數不足', 'down'); return; }
+    setBusy(true);
+    try {
+      const res = await gs('investBuy', { className: player.className, studentId: player.studentId, studentName: player.studentName, assetId, points: pts });
+      setPlayer(p => ({ ...p, points: res.points, holdings: res.holdings }));
+      pushToast(`買入 ${asset.name}，投入 ${np(pts)} 分`, null);
+      setFInvest('');
+    } catch (err) { pushToast(err.message, 'down'); }
+    setBusy(false);
+  }
+  async function sell(frac) {
+    if (!(h.qty > 0)) return;
+    setBusy(true);
+    try {
+      const res = await gs('investSell', { className: player.className, studentId: player.studentId, studentName: player.studentName, assetId, frac });
+      setPlayer(p => ({ ...p, points: res.points, holdings: res.holdings }));
+      pushToast(`賣出 ${asset.name}，損益 ${res.realized >= 0 ? '+' : ''}${np(res.realized)}`, res.realized >= 0 ? 'up' : 'down');
+    } catch (err) { pushToast(err.message, 'down'); }
+    setBusy(false);
+  }
+
+  return e("div", { className: "wrap" },
+    e("div", { className: "toasts" }, toasts.map(t => e("div", { key: t.id, className: `toast ${t.tone || ''}` }, t.text))),
+    e("div", { className: "topbar" },
+      e("div", null, e("div", { className: "who" }, player.studentName), e("div", { className: "cls" }, player.className)),
+      e("div", { className: "pts" }, np(player.points), e("small", null, "分"))),
+    e("div", { className: "assetTabs" }, ASSETS.map(a => {
+      const p = priceAt(a, now), p1 = priceAt(a, now - 3600000), chg = ((p - p1) / p1) * 100, up = chg >= 0;
+      return e("button", { key: a.id, className: `assetTab ${a.id === assetId ? 'on' : ''}`, onClick: () => setAssetId(a.id) },
+        e("div", { className: "nm" }, a.icon, " ", a.name),
+        e("div", { className: "pr" }, money(p, a.id === 'index' ? 0 : 2)),
+        e("div", { className: `chg ${up ? 'up' : 'down'}` }, (up ? '▲' : '▼') + ' ' + money(Math.abs(chg), 2) + '%'));
+    })),
+    e("div", { className: "panel" },
+      e("div", { className: "mkt-head" },
+        e("div", null, e("div", { className: "note" }, asset.icon, " ", asset.name, " · 教學用模擬行情"), e("div", { className: "price" }, money(price, assetId === 'index' ? 0 : 2))),
+        e("div", { className: `chg ${chgPct >= 0 ? 'up' : 'down'}` }, (chgPct >= 0 ? '▲' : '▼') + ' ' + money(Math.abs(chgPct), 2) + '%（近1小時）')),
+      e("div", { className: "tfRow" }, TIMEFRAMES.map(t => e("button", { key: t.key, className: `tfBtn ${t.key === tfKey ? 'on' : ''}`, onClick: () => setTfKey(t.key) }, t.label))),
+      e(CandleChart, { asset, tf }),
+      e("div", { className: "legend" },
+        e("span", null, e("span", { className: "dot", style: { background: "#5B6EE1" } }), "MA5"),
+        e("span", null, e("span", { className: "dot", style: { background: "#DB9B2E" } }), "MA20"),
+        e("span", null, "下方長條為模擬成交量"))),
+    e("div", { className: "trade" },
+      e("div", { className: "tcard" }, e("h4", null, "買入 " + asset.name),
+        e("div", { className: "kv" }, e("span", null, "可用分數"), e("span", { className: "v" }, np(player.points))),
+        e("div", { className: "field", style: { marginTop: 8 } }, e("label", null, "投入分數"),
+          e("input", { className: "inp", inputMode: "numeric", value: fInvest, onChange: ev => setFInvest(ev.target.value) })),
+        Number(fInvest) > 0 && e("div", { className: "note" }, "可買入約 ", (Number(fInvest) / price).toFixed(4), " ", asset.name),
+        e("button", { className: "btn gr", style: { width: "100%", marginTop: 10 }, disabled: busy, onClick: buy }, "買入")),
+      e("div", { className: "tcard" }, e("h4", null, "持倉"),
+        e("div", { className: "kv" }, e("span", null, "持有"), e("span", { className: "v" }, h.qty.toFixed(4), " ", asset.name)),
+        e("div", { className: "kv" }, e("span", null, "成本"), e("span", { className: "v" }, np(h.costBasis), " 分")),
+        e("div", { className: "kv" }, e("span", null, "現值"), e("span", { className: "v" }, np(value), " 分")),
+        e("div", { className: "kv" }, e("span", null, "損益"), e("span", { className: `pl ${pl >= 0 ? 'up' : 'down'}` }, (pl >= 0 ? '+' : '') + np(pl))),
+        e("div", { className: "sellrow" },
+          e("button", { className: "btn gh", disabled: busy || h.qty <= 0, onClick: () => sell(0.25) }, "賣 25%"),
+          e("button", { className: "btn gh", disabled: busy || h.qty <= 0, onClick: () => sell(0.5) }, "賣 50%"),
+          e("button", { className: "btn gr", disabled: busy || h.qty <= 0, onClick: () => sell(1) }, "全部賣出")))),
+    e("div", { className: "panel", style: { marginTop: 14 } },
+      e("div", { style: { fontWeight: 700, marginBottom: 8 } }, "我的所有持倉"),
+      (() => {
+        const rows = ASSETS.filter(a => (holdings[a.id] || {}).qty > 0).map(a => {
+          const ah = holdings[a.id];
+          const ap = priceAt(a, now), av = ah.qty * ap, apl = av - ah.costBasis;
+          return e("div", { key: a.id, className: "holdRow" },
+            e("span", null, a.icon, " ", a.name, "　", ah.qty.toFixed(4)),
+            e("span", { className: "v", style: { color: apl >= 0 ? "var(--green)" : "var(--red)" } }, np(av), " 分（", apl >= 0 ? '+' : '', np(apl), "）"));
+        });
+        return rows.length ? rows : e("div", { className: "note" }, "目前沒有任何持倉。");
+      })()),
+    e("div", { className: "switchRow" }, e("button", { className: "btn gh", onClick: onSwitch }, "↩️ 換人")));
+}
+
+function App() {
+  const [player, setPlayer] = useState(null);
+  if (!player) return e(LoginScreen, { onReady: setPlayer });
+  return e(TradeScreen, { player, setPlayer, onSwitch: () => setPlayer(null) });
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(e(App, null));
+</script>
+</body>
+</html>
