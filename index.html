@@ -194,6 +194,11 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw2LVxfHmnlggbhP5qH5
 // 例如: 'https://script.google.com/macros/s/AKfycbzhuj80ozTlDJMka5TEvNCjdvj5fMFepQnckJ8c-wveTD1Wg9-yl83BfVw5w-PXxgC9/exec'
 // 留空時會只使用 localStorage（離線模式）
 
+// 存取金鑰：必須和 Code.gs 的指令碼屬性 CE_API_KEY 完全一致，否則後端會拒絕所有請求。
+// 這把鑰匙寫在這裡本來就是公開可見的（跟 SCRIPT_URL 一樣），目的不是防高手，
+// 是擋掉隨便搜到網址就亂打 API 的人。
+const API_KEY = 'lm2v670kQyVh5SjNhot_t6N0xNBU0tSl';
+
 const {useState,useEffect,useRef,useMemo} = React;
 const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const nowMs = () => Date.now();
@@ -206,7 +211,7 @@ function gaussian(){let u=0,v=0;while(!u) u=Math.random();while(!v) v=Math.rando
 // ===== API Bridge (fetch to Apps Script) =====
 async function gs(action, payload) {
   if (!SCRIPT_URL) throw new Error('SCRIPT_URL 尚未設定');
-  const body = {action};
+  const body = {action, key: API_KEY};
   if (action === 'saveData') body.data = payload;
   else if (payload !== undefined) body.payload = payload;
   const resp = await fetch(SCRIPT_URL, {
