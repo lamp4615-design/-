@@ -134,8 +134,11 @@ const e = React.createElement;
 // ============================================================
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw2LVxfHmnlggbhP5qH59mj_rOfdPkeit75peHD-GIwMBro6Ys2sNMPlBy6yaJTvKo/exec';
 
+// 必須和 index.html、Code.gs 的指令碼屬性 CE_API_KEY 完全一致
+const API_KEY = 'lm2v670kQyVh5SjNhot_t6N0xNBU0tSl';
+
 async function gs(action, payload) {
-  const body = {action};
+  const body = {action, key: API_KEY};
   if (payload !== undefined) body.payload = payload;
   const resp = await fetch(SCRIPT_URL, {
     method: 'POST',
