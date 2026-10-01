@@ -208,66 +208,23 @@ const money = (x,d=2) => Number(x).toLocaleString("en-US",{minimumFractionDigits
 const clock = t => new Date(t).toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
 
 // ============================================================
-// 決定性行情引擎（v6：投資功能重構）
+// 投資標的（v7：改接真實行情）
 // ------------------------------------------------------------
-// 這段程式碼跟 invest.html / Code.gs 裡的版本必須逐字一致，才能保證
-// 任何裝置、任何時間點算出來的價格位元級相同，不需要把行情存進雲端
-// 輪詢，也不會有「哪台裝置比較便宜」的套利漏洞。
+// 乙太幣／黃金／大盤指數(台灣加權指數) 的實際價格跟 K 線，現在由後端
+// Apps Script 定期去抓真實資料（CoinGecko、Yahoo Finance）存成快取，
+// 前端只負責跟後端要「目前的快取」，不再自己用公式算價格。
+// 這裡只保留標的的基本資訊（id／名稱／icon），純粹給畫面顯示用。
 // ============================================================
-const EPOCH_MS = Date.UTC(2026, 0, 1, 0, 0, 0);
 const ASSETS = [
-  { id: 'eth',   name: '乙太幣',   icon: '⧫', start: 3500,  driftPerYear: 0.05, noiseAmp: 0.35, noisePeriodMin: 60, baseVolume: 900,  seed: 'ce-asset-eth-v1' },
-  { id: 'gold',  name: '黃金',     icon: '🟡', start: 2000,  driftPerYear: 0.03, noiseAmp: 0.12, noisePeriodMin: 90, baseVolume: 500,  seed: 'ce-asset-gold-v1' },
-  { id: 'index', name: '大盤指數', icon: '📈', start: 15000, driftPerYear: 0.06, noiseAmp: 0.18, noisePeriodMin: 75, baseVolume: 1200, seed: 'ce-asset-index-v1' }
+  { id: 'eth',   name: '乙太幣',   icon: '⧫' },
+  { id: 'gold',  name: '黃金',     icon: '🟡' },
+  { id: 'index', name: '大盤指數', icon: '📈' }
 ];
 const assetById_ = id => ASSETS.find(a => a.id === id);
-function hash32_(str) {
-  let h = 2166136261 >>> 0;
-  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
-  h ^= h >>> 15; h = Math.imul(h, 2246822519);
-  h ^= h >>> 13; h = Math.imul(h, 3266489917);
-  h ^= h >>> 16;
-  return (h >>> 0) / 4294967296;
-}
-const latticeVal_ = (seed, i) => hash32_(seed + '_' + i) * 2 - 1;
-const smooth_ = t => t * t * (3 - 2 * t);
-function valueNoise1D_(seed, x) {
-  const i0 = Math.floor(x), i1 = i0 + 1, f = x - i0;
-  const v0 = latticeVal_(seed, i0), v1 = latticeVal_(seed, i1);
-  return v0 + (v1 - v0) * smooth_(f);
-}
-function fbm_(seed, x, octaves) {
-  let amp = 1, freq = 1, sum = 0, norm = 0;
-  for (let o = 0; o < octaves; o++) { sum += valueNoise1D_(seed + ':' + o, x * freq) * amp; norm += amp; amp *= 0.5; freq *= 2.3; }
-  return sum / norm;
-}
-function priceAt(asset, tMs) {
-  const dtMin = (tMs - EPOCH_MS) / 60000;
-  const trendPerMin = Math.log(1 + asset.driftPerYear) / (365 * 24 * 60);
-  const noise = fbm_(asset.seed, dtMin / asset.noisePeriodMin, 7);
-  const logP = Math.log(asset.start) + trendPerMin * dtMin + asset.noiseAmp * noise;
-  return Math.max(asset.start * 0.2, Math.min(asset.start * 6, Math.exp(logP)));
-}
-function candleAt(asset, bucketStartMs, bucketWidthMs, samples = 8) {
-  const vals = [];
-  for (let i = 0; i <= samples; i++) vals.push(priceAt(asset, bucketStartMs + bucketWidthMs * i / samples));
-  return { t: bucketStartMs, open: vals[0], high: Math.max(...vals), low: Math.min(...vals), close: vals[vals.length - 1] };
-}
-function volumeAt(asset, bucketStartMs, bucketWidthMs, candle) {
-  const range = candle.open > 0 ? (candle.high - candle.low) / candle.open : 0;
-  const noiseV = hash32_(asset.seed + ':vol_' + Math.floor(bucketStartMs / bucketWidthMs));
-  return Math.round(asset.baseVolume * (0.4 + range * 25) * (0.5 + 0.9 * noiseV));
-}
-function buildSeries(asset, nowT, bucketWidthMs, count) {
-  const lastBucketStart = Math.floor(nowT / bucketWidthMs) * bucketWidthMs;
-  const out = [];
-  for (let i = count - 1; i >= 0; i--) {
-    const bStart = lastBucketStart - i * bucketWidthMs;
-    const c = candleAt(asset, bStart, bucketWidthMs);
-    out.push({...c, volume: volumeAt(asset, bStart, bucketWidthMs, c)});
-  }
-  return out;
-}
+const TIMEFRAMES = [
+  { key: 'day',  label: '日線' },
+  { key: 'week', label: '週線' }
+];
 function movingAverage(series, period) {
   const out = new Array(series.length).fill(null);
   let sum = 0;
@@ -278,12 +235,6 @@ function movingAverage(series, period) {
   }
   return out;
 }
-const TIMEFRAMES = [
-  { key: '1m', label: '1分', bucketMs: 60*1000, count: 60 },
-  { key: '5m', label: '5分', bucketMs: 5*60*1000, count: 60 },
-  { key: '1h', label: '1小時', bucketMs: 60*60*1000, count: 48 }
-];
-function currentPrices() { const now = Date.now(), out = {}; ASSETS.forEach(a => out[a.id] = priceAt(a, now)); return out; }
 /** 舊資料只有單一 eth／costBasis 欄位，第一次遇到時原封不動搬進 holdings.eth，之後以 holdings 為準。 */
 function normalizeHoldings(s) {
   if (!s.holdings) s.holdings = {};
@@ -292,7 +243,7 @@ function normalizeHoldings(s) {
   return s.holdings;
 }
 function totalAssetValue(s, prices) {
-  let v = 0; ASSETS.forEach(a => { const h = s.holdings && s.holdings[a.id]; if (h) v += (h.qty||0) * prices[a.id]; });
+  let v = 0; ASSETS.forEach(a => { const h = s.holdings && s.holdings[a.id]; if (h) v += (h.qty||0) * (prices[a.id]||0); });
   return v;
 }
 
@@ -375,7 +326,7 @@ function Modal({title,onClose,foot,children,lg}){
 }
 
 // ===== Kiosk View（給孩子在大螢幕上自助登記用）=====
-function KioskView({students, settings, prices, rate, className, applyDelta, open, buy, sell, repay, fInvest, setFInvest, fRepay, setFRepay, fAssetId, setFAssetId, fTf, setFTf, kioskStudentId, setKioskStudentId, setKioskMode, pushToast, cooldownUntil, setCooldownUntil}){
+function KioskView({students, settings, prices, rate, className, applyDelta, open, buy, sell, repay, fInvest, setFInvest, fRepay, setFRepay, fAssetId, setFAssetId, fTf, setFTf, marketData, kioskStudentId, setKioskStudentId, setKioskMode, pushToast, cooldownUntil, setCooldownUntil}){
   const e = React.createElement;
   const [screen, setScreen] = useState('actions'); // 'actions' | 'market' | 'loan'
   const [exitPrompt, setExitPrompt] = useState(false);
@@ -445,7 +396,7 @@ function KioskView({students, settings, prices, rate, className, applyDelta, ope
     return e("div", { className: "kiosk" },
       e("div", { className: "kiosk-top" }, e("h1", null, student.name, "．投資"),
         e("button", { className: "kback", onClick: () => setScreen('actions') }, "← 返回")),
-      e(Market, { students: [student], trader: student, tradeId: student.id, setTradeId: () => {}, buy, sell, fInvest, setFInvest, fAssetId, setFAssetId, fTf, setFTf, className, hideSelector: true }),
+      e(Market, { students: [student], trader: student, tradeId: student.id, setTradeId: () => {}, buy, sell, fInvest, setFInvest, fAssetId, setFAssetId, fTf, setFTf, marketData, className, hideSelector: true }),
       exitModal);
   }
 
@@ -493,7 +444,7 @@ function App(){
   const [classes,setClasses]=useState({});
   const [activeId,setActiveId]=useState(null);
   const [settings,setSettings]=useState(DEFAULT_SETTINGS);
-  const [priceTick,setPriceTick]=useState(0); // 每 2 秒 +1，逼 React 用最新時間重算 prices（行情本身不是 state，是決定性公式）
+  const [marketData,setMarketData]=useState(null); // 從後端 marketData 動作拿到的真實行情快取
   const [tab,setTab]=useState("overview");
   const [toasts,setToasts]=useState([]);
   const [modal,setModal]=useState(null);
@@ -511,7 +462,7 @@ function App(){
   const [fTutee,setFTutee]=useState("");const [fImp,setFImp]=useState("");
   const [fBorrow,setFBorrow]=useState("");const [fVal,setFVal]=useState("");const [fNote,setFNote]=useState("");
   const [fName,setFName]=useState("");const [fInvest,setFInvest]=useState("");const [fImport,setFImport]=useState("");
-  const [fAssetId,setFAssetId]=useState("eth");const [fTf,setFTf]=useState("1m");
+  const [fAssetId,setFAssetId]=useState("eth");const [fTf,setFTf]=useState("day");
   const [fLeaveType,setFLeaveType]=useState("病假");const [fLeaveDate,setFLeaveDate]=useState("");const [fLeaveNote,setFLeaveNote]=useState("");
   const [leaveBusy,setLeaveBusy]=useState(false);
   const [fRepay,setFRepay]=useState("");
@@ -519,8 +470,16 @@ function App(){
   const settingsRef=useRef(settings);
   const lastBlobRef=useRef("");const lastRemoteRef=useRef("");const pendingRef=useRef(false);
   useEffect(()=>{settingsRef.current=settings;},[settings]);
-  // 行情每 2 秒「看起來」跳動一次：不是在模擬什麼，只是逼畫面用當下的 Date.now() 重新算一次決定性價格
-  useEffect(()=>{const iv=setInterval(()=>setPriceTick(x=>x+1),2000);return ()=>clearInterval(iv);},[]);
+  // 真實行情：跟後端要目前的快取，每 60 秒重新拿一次（後端本身每 15 分鐘才真的去外部 API 抓一次，
+  // 這裡抓勤一點只是讓剛買賣完的畫面能快點反映，不會因此變得更即時）。
+  useEffect(()=>{
+    if(!loaded) return;
+    let cancelled=false;
+    const load=()=>gs('marketData').then(d=>{if(!cancelled) setMarketData(d);}).catch(()=>{});
+    load();
+    const iv=setInterval(load,60000);
+    return ()=>{cancelled=true;clearInterval(iv);};
+  },[loaded]);
   // 大螢幕模式時給 body 加上 class，讓彈出視窗自動放大
   useEffect(()=>{
     try{document.body.classList.toggle("kiosk-on",kioskMode);}catch(e){}
@@ -593,7 +552,11 @@ function App(){
     return ()=>clearInterval(iv);
   },[loaded]);
 
-  const prices=useMemo(()=>currentPrices(),[priceTick]);
+  const prices=useMemo(()=>{
+    const out={};
+    ASSETS.forEach(a=>{out[a.id]=(marketData&&marketData.assets&&marketData.assets[a.id]&&marketData.assets[a.id].price)||0;});
+    return out;
+  },[marketData]);
   const rate=settings.loanRate;
   const classList=Object.values(classes);
   const active=classes[activeId];
@@ -775,7 +738,7 @@ function App(){
     kioskMode ? e(KioskView,{
       students, settings, prices, rate, className:active?.name,
       applyDelta, open, buy, sell, repay, fInvest, setFInvest, fRepay, setFRepay,
-      fAssetId, setFAssetId, fTf, setFTf,
+      fAssetId, setFAssetId, fTf, setFTf, marketData,
       kioskStudentId, setKioskStudentId, setKioskMode, pushToast,
       cooldownUntil:kioskCooldownUntil, setCooldownUntil:setKioskCooldownUntil
     }) : e("div",{className:"ce-wrap"},
@@ -799,7 +762,7 @@ function App(){
     tab==="overview"&&e(Overview,{classList,prices,rate,activeName:active?.name}),
     tab==="board"&&e(Scoreboard,{active,students,settings,prices,rate,open,applyDelta,undoLast,setTab,setTradeId,loadDemo}),
     tab==="rank"&&e(Leaderboard,{ranked,prices,rate,className:active?.name}),
-    tab==="market"&&e(Market,{students,trader,tradeId,setTradeId,buy,sell,fInvest,setFInvest,fAssetId,setFAssetId,fTf,setFTf,className:active?.name}),
+    tab==="market"&&e(Market,{students,trader,tradeId,setTradeId,buy,sell,fInvest,setFInvest,fAssetId,setFAssetId,fTf,setFTf,marketData,className:active?.name}),
     tab==="loan"&&e(LoanCenter,{students,rate,repay,fRepay,setFRepay}),
     tab==="set"&&e(Settings,{settings,setS,open,exportData,loadDemo,active,lastSaved,dbUrl,canDelClass:classList.length>1,setKioskMode}),
     ), // end of ce-wrap div (non-kiosk branch)
@@ -989,21 +952,20 @@ function Leaderboard({ranked,prices,rate,className}){
     })));
 }
 
-// ===== K 線圖（SVG，含均線與成交量）=====
-function CandleChart({asset,tf}){
+// ===== K 線圖（SVG，含均線；有真實成交量才畫成交量） =====
+function CandleChart({series}){
   const e=React.createElement;
-  const [,tick]=useState(0);
-  useEffect(()=>{const iv=setInterval(()=>tick(x=>x+1),2000);return ()=>clearInterval(iv);},[]);
-  const series=useMemo(()=>buildSeries(asset,Date.now(),tf.bucketMs,tf.count),[asset.id,tf.key,Math.floor(Date.now()/2000)]);
+  if(!series||series.length<2) return e("div",{className:"note",style:{marginTop:10,textAlign:"center",padding:"20px 0"}},"行情資料還沒抓回來，稍等一下，或請老師到 Apps Script 執行一次 refreshMarketCache_()。");
+  const hasVolume=series.some(c=>c.volume!=null&&c.volume>0);
   const ma5=movingAverage(series,5),ma20=movingAverage(series,20);
-  const W=760,H=200,VH=56,padX=8,padTop=8,padBottom=8;
+  const W=760,H=200,VH=hasVolume?56:0,padX=8,padTop=8,padBottom=8;
   const n=series.length;
   const highs=series.map(c=>c.high),lows=series.map(c=>c.low);
   const maxP=Math.max(...highs),minP=Math.min(...lows),span=(maxP-minP)||1;
   const chartH=H-padTop-padBottom;
   const y=v=>padTop+chartH*(1-(v-minP)/span);
   const slotW=(W-2*padX)/n,bodyW=Math.max(2,slotW*0.6);
-  const maxV=Math.max(...series.map(c=>c.volume))||1;
+  const maxV=hasVolume?Math.max(...series.map(c=>c.volume||0))||1:1;
   const volY0=H+6;
   const mkPoly=arr=>arr.map((v,i)=>v==null?null:`${padX+slotW*(i+0.5)},${y(v)}`).filter(Boolean).join(' ');
   return e("svg",{viewBox:`0 0 ${W} ${H+VH+6}`,width:"100%",height:H+VH+6,style:{display:"block"},preserveAspectRatio:"none"},
@@ -1017,45 +979,47 @@ function CandleChart({asset,tf}){
     }),
     e("polyline",{points:mkPoly(ma5),fill:"none",stroke:"#5B6EE1",strokeWidth:1.6}),
     e("polyline",{points:mkPoly(ma20),fill:"none",stroke:"#DB9B2E",strokeWidth:1.6}),
-    series.map((c,i)=>{
-      const cx=padX+slotW*(i+0.5),up=c.close>=c.open,h=VH*0.85*(c.volume/maxV);
+    hasVolume&&series.map((c,i)=>{
+      const cx=padX+slotW*(i+0.5),up=c.close>=c.open,h=VH*0.85*((c.volume||0)/maxV);
       return e("rect",{key:"v"+i,x:cx-bodyW/2,y:volY0+(VH*0.9-h),width:bodyW,height:h,fill:up?"rgba(14,159,110,.5)":"rgba(224,85,85,.5)"});
     }));
 }
 
-// ===== Market（多標的投資市場） =====
-function Market({students,trader,tradeId,setTradeId,buy,sell,fInvest,setFInvest,fAssetId,setFAssetId,fTf,setFTf,className,hideSelector}){
+// ===== Market（多標的投資市場，接真實行情） =====
+function Market({students,trader,tradeId,setTradeId,buy,sell,fInvest,setFInvest,fAssetId,setFAssetId,fTf,setFTf,marketData,className,hideSelector}){
   const e=React.createElement;
-  const [,tick]=useState(0);
-  useEffect(()=>{const iv=setInterval(()=>tick(x=>x+1),2000);return ()=>clearInterval(iv);},[]);
   const asset=assetById_(fAssetId);
-  const tf=TIMEFRAMES.find(t=>t.key===fTf);
-  const now=Date.now();
-  const price=priceAt(asset,now);
-  const price1hAgo=priceAt(asset,now-3600000);
-  const chgPct=((price-price1hAgo)/price1hAgo)*100,up=chgPct>=0;
+  const assetCache=marketData&&marketData.assets&&marketData.assets[fAssetId];
+  const price=(assetCache&&assetCache.price)||0;
+  const series=(assetCache&&assetCache.candles&&assetCache.candles[fTf])||[];
+  const first=series.length?series[0].close:price;
+  const chgPct=first?((price-first)/first)*100:0,up=chgPct>=0;
   const h=trader&&trader.holdings&&trader.holdings[fAssetId];
+  const isStale=!assetCache||assetCache.stale;
   return e("div",{style:{marginTop:18}},
     e("div",{className:"assetTabsRow",style:{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}},
       ASSETS.map(a=>{
-        const p=priceAt(a,now),p1=priceAt(a,now-3600000),c=((p-p1)/p1)*100,u=c>=0;
+        const ac=marketData&&marketData.assets&&marketData.assets[a.id];
+        const p=(ac&&ac.price)||0;
+        const daySeries=(ac&&ac.candles&&ac.candles.day)||[];
+        const p1=daySeries.length?daySeries[0].close:p;
+        const c=p1?((p-p1)/p1)*100:0,u=c>=0;
         return e("button",{key:a.id,onClick:()=>setFAssetId(a.id),
           style:{border:`1px solid ${a.id===fAssetId?"var(--indigo)":"var(--line)"}`,background:a.id===fAssetId?"var(--indigo-s)":"#fff",borderRadius:12,padding:"8px 14px",cursor:"pointer",fontFamily:"var(--cjk)",minWidth:120,textAlign:"left"}},
           e("div",{style:{fontWeight:700,fontSize:13}},a.icon," ",a.name),
-          e("div",{style:{fontFamily:"var(--mono)",fontWeight:800,fontSize:15}},money(p,a.id==="index"?0:2)),
-          e("div",{style:{fontFamily:"var(--mono)",fontSize:11,fontWeight:700,color:u?"var(--green)":"var(--red)"}},(u?"▲":"▼")+" "+money(Math.abs(c),2)+"%"));
+          e("div",{style:{fontFamily:"var(--mono)",fontWeight:800,fontSize:15}},p?money(p,a.id==="index"?0:2):"—"),
+          e("div",{style:{fontFamily:"var(--mono)",fontSize:11,fontWeight:700,color:u?"var(--green)":"var(--red)"}},p1?(u?"▲":"▼")+" "+money(Math.abs(c),2)+"%":""));
       })),
     e("div",{className:"panel"},
       e("div",{className:"mkt-head"},
-        e("div",null,e("div",{className:"note",style:{marginBottom:2}},asset.icon," ",asset.name," · 教學用模擬行情"),e("div",{className:"price"},money(price,fAssetId==="index"?0:2))),
-        e("div",{className:`chg ${up?"up":"down"}`},up?"▲":"▼"," ",money(Math.abs(chgPct),2),"%（近1小時）")),
+        e("div",null,e("div",{className:"note",style:{marginBottom:2}},asset.icon," ",asset.name," · ",assetCache?assetCache.source:"載入中",isStale&&assetCache?"（資料較舊，稍候自動更新）":""),e("div",{className:"price"},price?money(price,fAssetId==="index"?0:2):"—")),
+        series.length>0&&e("div",{className:`chg ${up?"up":"down"}`},up?"▲":"▼"," ",money(Math.abs(chgPct),2),"%")),
       e("div",{style:{display:"flex",gap:6,margin:"8px 0 4px"}},TIMEFRAMES.map(t=>e("button",{key:t.key,onClick:()=>setFTf(t.key),
         style:{border:`1px solid ${t.key===fTf?"var(--ink)":"var(--line)"}`,background:t.key===fTf?"var(--ink)":"#fff",color:t.key===fTf?"#fff":"var(--soft)",borderRadius:8,padding:"5px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}},t.label))),
-      e(CandleChart,{asset,tf}),
+      e(CandleChart,{series}),
       e("div",{style:{display:"flex",gap:14,fontSize:11,color:"var(--soft)",marginTop:4}},
         e("span",null,e("span",{style:{display:"inline-block",width:9,height:9,borderRadius:"50%",background:"#5B6EE1",marginRight:4}}),"MA5"),
-        e("span",null,e("span",{style:{display:"inline-block",width:9,height:9,borderRadius:"50%",background:"#DB9B2E",marginRight:4}}),"MA20"),
-        e("span",null,"下方長條為模擬成交量"))),
+        e("span",null,e("span",{style:{display:"inline-block",width:9,height:9,borderRadius:"50%",background:"#DB9B2E",marginRight:4}}),"MA20"))),
     !hideSelector&&e("div",{className:"selstu"},
       e("span",{style:{fontWeight:700,fontSize:13}},"選擇學生（",className,"）："),
       e("select",{className:"inp",value:tradeId||"",onChange:ev=>setTradeId(ev.target.value||null)},
@@ -1147,7 +1111,8 @@ function Settings({settings,setS,open,exportData,loadDemo,active,lastSaved,dbUrl
         e("div",{className:"field"},e("label",null,"每日利率（%）"),e("input",{className:"inp mono",value:settings.loanRate*100,onChange:ev=>setS({loanRate:Number(ev.target.value)/100})})))),
     e("div",{className:"panel"},
       e("div",{style:{fontWeight:700,marginBottom:6}},"投資市場"),
-      e("div",{className:"note"},"乙太幣、黃金、大盤指數三個標的的行情，改用固定公式計算，任何裝置、任何時間算出來的價格都保證一致，不會有「哪台裝置比較便宜」的落差，所以這裡沒有可調整的欄位了。"),
+      e("div",{className:"note"},"乙太幣、黃金、大盤指數（台灣加權指數）三個標的，接的是真實市場行情（乙太幣來自 CoinGecko，黃金、大盤指數來自 Yahoo Finance），每 15 分鐘由後端自動更新一次，所以這裡沒有可調整的欄位。"),
+      e("div",{className:"note",style:{marginTop:6}},"真實行情需要老師在 Apps Script 執行一次 ",e("code",null,"setupMarketTrigger_()")," 設定定期更新，詳情看 Code.gs 開頭的說明。"),
       e("div",{className:"note",style:{marginTop:6}},"想讓學生自己買賣，可以把 ",e("code",null,"invest.html")," 這個網址給學生，他們選自己的名字後就能獨立操作，不用透過這個管理畫面。")),
     e("div",{className:"panel"},
       e("div",{style:{fontWeight:700,marginBottom:6}},"🖥️ 大螢幕自助登記模式"),
