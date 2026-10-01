@@ -111,75 +111,18 @@ const {useState, useEffect, useRef, useMemo} = React;
 const e = React.createElement;
 
 // ============================================================
-// 決定性行情引擎
+// 投資標的（v7：改接真實行情）
 // ------------------------------------------------------------
-// 這段程式碼跟 index.html / Code.gs 裡的版本必須逐字一致，才能保證
-// 任何裝置、任何時間點算出來的價格位元級相同。
+// 真實價格跟 K 線由後端 Apps Script 定期抓（CoinGecko、Yahoo Finance）
+// 存成快取，這裡只保留標的基本資訊給畫面顯示用，不再自己算價格。
 // ============================================================
-const EPOCH_MS = Date.UTC(2026, 0, 1, 0, 0, 0);
-
 const ASSETS = [
-  { id: 'eth',   name: '乙太幣',   icon: '⧫', start: 3500,  driftPerYear: 0.05, noiseAmp: 0.35, noisePeriodMin: 60, baseVolume: 900,  seed: 'ce-asset-eth-v1' },
-  { id: 'gold',  name: '黃金',     icon: '🟡', start: 2000,  driftPerYear: 0.03, noiseAmp: 0.12, noisePeriodMin: 90, baseVolume: 500,  seed: 'ce-asset-gold-v1' },
-  { id: 'index', name: '大盤指數', icon: '📈', start: 15000, driftPerYear: 0.06, noiseAmp: 0.18, noisePeriodMin: 75, baseVolume: 1200, seed: 'ce-asset-index-v1' }
+  { id: 'eth',   name: '乙太幣',   icon: '⧫' },
+  { id: 'gold',  name: '黃金',     icon: '🟡' },
+  { id: 'index', name: '大盤指數', icon: '📈' }
 ];
 const assetById_ = id => ASSETS.find(a => a.id === id);
 
-function hash32_(str) {
-  let h = 2166136261 >>> 0;
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  h ^= h >>> 15; h = Math.imul(h, 2246822519);
-  h ^= h >>> 13; h = Math.imul(h, 3266489917);
-  h ^= h >>> 16;
-  return (h >>> 0) / 4294967296;
-}
-const latticeVal_ = (seed, i) => hash32_(seed + '_' + i) * 2 - 1;
-const smooth_ = t => t * t * (3 - 2 * t);
-function valueNoise1D_(seed, x) {
-  const i0 = Math.floor(x), i1 = i0 + 1, f = x - i0;
-  const v0 = latticeVal_(seed, i0), v1 = latticeVal_(seed, i1);
-  return v0 + (v1 - v0) * smooth_(f);
-}
-function fbm_(seed, x, octaves) {
-  let amp = 1, freq = 1, sum = 0, norm = 0;
-  for (let o = 0; o < octaves; o++) {
-    sum += valueNoise1D_(seed + ':' + o, x * freq) * amp;
-    norm += amp;
-    amp *= 0.5; freq *= 2.3;
-  }
-  return sum / norm;
-}
-function priceAt(asset, tMs) {
-  const dtMin = (tMs - EPOCH_MS) / 60000;
-  const trendPerMin = Math.log(1 + asset.driftPerYear) / (365 * 24 * 60);
-  const noise = fbm_(asset.seed, dtMin / asset.noisePeriodMin, 7);
-  const logP = Math.log(asset.start) + trendPerMin * dtMin + asset.noiseAmp * noise;
-  const p = Math.exp(logP);
-  return Math.max(asset.start * 0.2, Math.min(asset.start * 6, p));
-}
-function candleAt(asset, bucketStartMs, bucketWidthMs, samples = 8) {
-  const vals = [];
-  for (let i = 0; i <= samples; i++) vals.push(priceAt(asset, bucketStartMs + bucketWidthMs * i / samples));
-  return { t: bucketStartMs, open: vals[0], high: Math.max(...vals), low: Math.min(...vals), close: vals[vals.length - 1] };
-}
-function volumeAt(asset, bucketStartMs, bucketWidthMs, candle) {
-  const range = candle.open > 0 ? (candle.high - candle.low) / candle.open : 0;
-  const noiseV = hash32_(asset.seed + ':vol_' + Math.floor(bucketStartMs / bucketWidthMs));
-  return Math.round(asset.baseVolume * (0.4 + range * 25) * (0.5 + 0.9 * noiseV));
-}
-function buildSeries(asset, nowMs, bucketWidthMs, count) {
-  const lastBucketStart = Math.floor(nowMs / bucketWidthMs) * bucketWidthMs;
-  const out = [];
-  for (let i = count - 1; i >= 0; i--) {
-    const bStart = lastBucketStart - i * bucketWidthMs;
-    const c = candleAt(asset, bStart, bucketWidthMs);
-    out.push({ ...c, volume: volumeAt(asset, bStart, bucketWidthMs, c) });
-  }
-  return out;
-}
 function movingAverage(series, period) {
   const out = new Array(series.length).fill(null);
   let sum = 0;
@@ -195,24 +138,18 @@ const np = x => { const v = Math.round(x * 10) / 10; return Number.isInteger(v) 
 const money = (x, d = 2) => Number(x).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
 
 const TIMEFRAMES = [
-  { key: '1m', label: '1分', bucketMs: 60 * 1000, count: 60 },
-  { key: '5m', label: '5分', bucketMs: 5 * 60 * 1000, count: 60 },
-  { key: '1h', label: '1小時', bucketMs: 60 * 60 * 1000, count: 48 }
+  { key: 'day',  label: '日線' },
+  { key: 'week', label: '週線' }
 ];
 
-// ===== K 線圖（SVG）=====
-function CandleChart({ asset, tf }) {
-  const [, tick] = useState(0);
-  useEffect(() => {
-    const iv = setInterval(() => tick(x => x + 1), 2000);
-    return () => clearInterval(iv);
-  }, []);
-
-  const series = useMemo(() => buildSeries(asset, Date.now(), tf.bucketMs, tf.count), [asset.id, tf.key, Math.floor(Date.now() / 2000)]);
+// ===== K 線圖（SVG，有真實成交量才畫成交量）=====
+function CandleChart({ series }) {
+  if (!series || series.length < 2) return e("div", { className: "note", style: { textAlign: "center", padding: "20px 0" } }, "行情資料還沒抓回來，稍等一下。");
+  const hasVolume = series.some(c => c.volume != null && c.volume > 0);
   const ma5 = movingAverage(series, 5);
   const ma20 = movingAverage(series, 20);
 
-  const W = 760, H = 200, VH = 56, padX = 8, padTop = 8, padBottom = 8;
+  const W = 760, H = 200, VH = hasVolume ? 56 : 0, padX = 8, padTop = 8, padBottom = 8;
   const n = series.length;
   const highs = series.map(c => c.high), lows = series.map(c => c.low);
   const maxP = Math.max(...highs), minP = Math.min(...lows);
@@ -221,7 +158,7 @@ function CandleChart({ asset, tf }) {
   const y = v => padTop + chartH * (1 - (v - minP) / span);
   const slotW = (W - 2 * padX) / n;
   const bodyW = Math.max(2, slotW * 0.6);
-  const maxV = Math.max(...series.map(c => c.volume)) || 1;
+  const maxV = hasVolume ? (Math.max(...series.map(c => c.volume || 0)) || 1) : 1;
   const volY0 = H + 6;
 
   const mkPoly = arr => arr.map((v, i) => (v == null ? null : `${padX + slotW * (i + 0.5)},${y(v)}`)).filter(Boolean).join(' ');
@@ -237,9 +174,9 @@ function CandleChart({ asset, tf }) {
     }),
     e("polyline", { points: mkPoly(ma5), fill: "none", stroke: "#5B6EE1", strokeWidth: 1.6 }),
     e("polyline", { points: mkPoly(ma20), fill: "none", stroke: "#DB9B2E", strokeWidth: 1.6 }),
-    series.map((c, i) => {
+    hasVolume && series.map((c, i) => {
       const cx = padX + slotW * (i + 0.5), up = c.close >= c.open;
-      const h = VH * 0.85 * (c.volume / maxV);
+      const h = VH * 0.85 * ((c.volume || 0) / maxV);
       return e("rect", { key: "v" + i, x: cx - bodyW / 2, y: volY0 + (VH * 0.9 - h), width: bodyW, height: h, fill: up ? "rgba(14,159,110,.5)" : "rgba(224,85,85,.5)" });
     })
   );
@@ -311,19 +248,26 @@ function LoginScreen({ onReady }) {
 // ===== 交易畫面 =====
 function TradeScreen({ player, setPlayer, onSwitch }) {
   const [assetId, setAssetId] = useState('eth');
-  const [tfKey, setTfKey] = useState('1m');
+  const [tfKey, setTfKey] = useState('day');
   const [fInvest, setFInvest] = useState('');
   const [busy, setBusy] = useState(false);
   const [toasts, pushToast] = useToasts();
-  const [, tick] = useState(0);
-  useEffect(() => { const iv = setInterval(() => tick(x => x + 1), 2000); return () => clearInterval(iv); }, []);
+  const [marketData, setMarketData] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => gs('marketData').then(d => { if (!cancelled) setMarketData(d); }).catch(() => {});
+    load();
+    const iv = setInterval(load, 60000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, []);
 
   const asset = assetById_(assetId);
-  const tf = TIMEFRAMES.find(t => t.key === tfKey);
-  const now = Date.now();
-  const price = priceAt(asset, now);
-  const price1hAgo = priceAt(asset, now - 3600000);
-  const chgPct = ((price - price1hAgo) / price1hAgo) * 100;
+  const assetCache = marketData && marketData.assets && marketData.assets[assetId];
+  const price = (assetCache && assetCache.price) || 0;
+  const series = (assetCache && assetCache.candles && assetCache.candles[tfKey]) || [];
+  const first = series.length ? series[0].close : price;
+  const chgPct = first ? ((price - first) / first) * 100 : 0;
 
   const holdings = player.holdings || {};
   const h = holdings[assetId] || { qty: 0, costBasis: 0 };
@@ -360,22 +304,25 @@ function TradeScreen({ player, setPlayer, onSwitch }) {
       e("div", null, e("div", { className: "who" }, player.studentName), e("div", { className: "cls" }, player.className)),
       e("div", { className: "pts" }, np(player.points), e("small", null, "分"))),
     e("div", { className: "assetTabs" }, ASSETS.map(a => {
-      const p = priceAt(a, now), p1 = priceAt(a, now - 3600000), chg = ((p - p1) / p1) * 100, up = chg >= 0;
+      const ac = marketData && marketData.assets && marketData.assets[a.id];
+      const p = (ac && ac.price) || 0;
+      const daySeries = (ac && ac.candles && ac.candles.day) || [];
+      const p1 = daySeries.length ? daySeries[0].close : p;
+      const chg = p1 ? ((p - p1) / p1) * 100 : 0, up = chg >= 0;
       return e("button", { key: a.id, className: `assetTab ${a.id === assetId ? 'on' : ''}`, onClick: () => setAssetId(a.id) },
         e("div", { className: "nm" }, a.icon, " ", a.name),
-        e("div", { className: "pr" }, money(p, a.id === 'index' ? 0 : 2)),
-        e("div", { className: `chg ${up ? 'up' : 'down'}` }, (up ? '▲' : '▼') + ' ' + money(Math.abs(chg), 2) + '%'));
+        e("div", { className: "pr" }, p ? money(p, a.id === 'index' ? 0 : 2) : "—"),
+        e("div", { className: `chg ${up ? 'up' : 'down'}` }, p1 ? (up ? '▲' : '▼') + ' ' + money(Math.abs(chg), 2) + '%' : ""));
     })),
     e("div", { className: "panel" },
       e("div", { className: "mkt-head" },
-        e("div", null, e("div", { className: "note" }, asset.icon, " ", asset.name, " · 教學用模擬行情"), e("div", { className: "price" }, money(price, assetId === 'index' ? 0 : 2))),
-        e("div", { className: `chg ${chgPct >= 0 ? 'up' : 'down'}` }, (chgPct >= 0 ? '▲' : '▼') + ' ' + money(Math.abs(chgPct), 2) + '%（近1小時）')),
+        e("div", null, e("div", { className: "note" }, asset.icon, " ", asset.name, " · ", assetCache ? assetCache.source : "載入中", assetCache && assetCache.stale ? "（資料較舊，稍候自動更新）" : ""), e("div", { className: "price" }, price ? money(price, assetId === 'index' ? 0 : 2) : "—")),
+        series.length > 0 && e("div", { className: `chg ${chgPct >= 0 ? 'up' : 'down'}` }, (chgPct >= 0 ? '▲' : '▼') + ' ' + money(Math.abs(chgPct), 2) + '%')),
       e("div", { className: "tfRow" }, TIMEFRAMES.map(t => e("button", { key: t.key, className: `tfBtn ${t.key === tfKey ? 'on' : ''}`, onClick: () => setTfKey(t.key) }, t.label))),
-      e(CandleChart, { asset, tf }),
+      e(CandleChart, { series }),
       e("div", { className: "legend" },
         e("span", null, e("span", { className: "dot", style: { background: "#5B6EE1" } }), "MA5"),
-        e("span", null, e("span", { className: "dot", style: { background: "#DB9B2E" } }), "MA20"),
-        e("span", null, "下方長條為模擬成交量"))),
+        e("span", null, e("span", { className: "dot", style: { background: "#DB9B2E" } }), "MA20"))),
     e("div", { className: "trade" },
       e("div", { className: "tcard" }, e("h4", null, "買入 " + asset.name),
         e("div", { className: "kv" }, e("span", null, "可用分數"), e("span", { className: "v" }, np(player.points))),
@@ -397,7 +344,8 @@ function TradeScreen({ player, setPlayer, onSwitch }) {
       (() => {
         const rows = ASSETS.filter(a => (holdings[a.id] || {}).qty > 0).map(a => {
           const ah = holdings[a.id];
-          const ap = priceAt(a, now), av = ah.qty * ap, apl = av - ah.costBasis;
+          const ac = marketData && marketData.assets && marketData.assets[a.id];
+          const ap = (ac && ac.price) || 0, av = ah.qty * ap, apl = av - ah.costBasis;
           return e("div", { key: a.id, className: "holdRow" },
             e("span", null, a.icon, " ", a.name, "　", ah.qty.toFixed(4)),
             e("span", { className: "v", style: { color: apl >= 0 ? "var(--green)" : "var(--red)" } }, np(av), " 分（", apl >= 0 ? '+' : '', np(apl), "）"));
